@@ -1,0 +1,75 @@
+{
+  "responsibilities": [
+    {
+      "id": "mgmt1",
+      "level": "high",
+      "title": "Staff Developer - Digital Innovation Unit",
+      "organization": "THIQAH Business Services Co.",
+      "startDate": "Jan 2024",
+      "endDate": null,
+      "isCurrent": true,
+      "description": "Leading initiatives bridging development and R&D teams, including establishing the AI Integration & Adoption Unit. Providing strategic guidance and technical support to product engineering teams.",
+      "keyResponsibilities": [
+        "Established AI Integration & Adoption Unit",
+        "Led initiatives bridging development and R&D teams",
+        "Transformed concepts into MVPs (iHealth, Quality Mate, Business AI)",
+        "Provided strategic guidance to product engineering teams",
+        "Enhanced development workflows and processes",
+        "Integrated AI agents and automated processes"
+      ],
+      "achievements": [
+        "First Place, THIQAH Hackathon (2023)",
+        "Second Place, Elm Company Hackathon (2025)",
+        "iHealth Product Presentation at LEAP 2025",
+        "Successfully established AI Integration & Adoption Unit",
+        "Delivered multiple AI-driven MVPs"
+      ]
+    },
+    {
+      "id": "mgmt2",
+      "level": "high",
+      "title": "Technical Leadership - Frontend Architecture",
+      "organization": "THIQAH Business Services Co.",
+      "startDate": "Jul 2019",
+      "endDate": null,
+      "isCurrent": true,
+      "description": "Leading frontend architecture design and establishing best practices across product engineering teams. Mentoring developers and promoting quality standards.",
+      "keyResponsibilities": [
+        "Guided frontend architecture design and implementation",
+        "Established frontend development standards and best practices",
+        "Mentored team members on modern development practices",
+        "Conducted code reviews and quality assessments",
+        "Developed reusable design system components",
+        "Led technical decision-making for frontend technologies"
+      ],
+      "achievements": [
+        "Delivered 25+ large-scale government projects",
+        "Established design system and component library",
+        "Improved code quality through mentorship",
+        "Successfully trained and mentored multiple developers"
+      ]
+    },
+    {
+      "id": "mgmt3",
+      "level": "medium",
+      "title": "Team Leader - ITI eLearning Track",
+      "organization": "Information Technology Institute (ITI)",
+      "startDate": "Oct 2014",
+      "endDate": "Jun 2015",
+      "isCurrent": false,
+      "description": "Led team of trainees in eLearning Technologies Specialist Track during intensive 9-month training program.",
+      "keyResponsibilities": [
+        "Led team of trainees as Team Leader",
+        "Coordinated instructional design and content development projects",
+        "Facilitated team collaboration and project execution",
+        "Applied instructional design methodologies",
+        "Managed project timelines and deliverables"
+      ],
+      "achievements": [
+        "Successfully completed training program with Very Good grade",
+        "Led team to successful project completions",
+        "Gained comprehensive e-learning development skills"
+      ]
+    }
+  ]
+}

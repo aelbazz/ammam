@@ -1,0 +1,446 @@
+{
+  "courses": [
+    {
+      "id": "edu1",
+      "title": "Diploma in Computer Science",
+      "provider": "Mansoura University, Faculty of Specific Education",
+      "completionDate": "2016",
+      "startDate": "2014",
+      "level": "Diploma",
+      "description": "Advanced diploma program in Computer Science covering software development, web technologies, programming, and computer applications.",
+      "skills": [
+        "Computer Science",
+        "Software Development",
+        "Web Technologies",
+        "Programming",
+        "Computer Applications"
+      ]
+    },
+    {
+      "id": "edu2",
+      "title": "Information Technology Institute (ITI) - Professional Training Program",
+      "provider": "Information Technology Institute (ITI), Egypt",
+      "completionDate": "2015",
+      "startDate": "2014",
+      "level": "Professional Certification",
+      "duration": "9 Months",
+      "grade": "Very Good",
+      "description": "Intensive 9-month professional training program bridging academic knowledge with ICT market needs. Selective scholarship program with hands-on projects and industry-aligned tracks in eLearning Technologies. Served as Team Leader for the eLearning Track.",
+      "skills": [
+        "E-Learning Technologies",
+        "Web Development",
+        "Instructional Design",
+        "Content Development",
+        "LMS Administration",
+        "Team Leadership",
+        "Project Management"
+      ]
+    },
+    {
+      "id": "edu3",
+      "title": "Bachelor of Specific Education - Computer Department",
+      "provider": "Mansoura University, Egypt",
+      "completionDate": "2013",
+      "startDate": "2009",
+      "level": "Bachelor's Degree",
+      "grade": "Good",
+      "description": "Bachelor's degree in Specific Education with specialization in Computer Department, covering educational technology, computer science fundamentals, and instructional methodologies.",
+      "skills": [
+        "Computer Science",
+        "Educational Technology",
+        "Instructional Design",
+        "Web Development",
+        "Programming",
+        "Teaching Methodologies"
+      ]
+    },
+    {
+      "id": "course24",
+      "title": "NVIDIA: Fundamentals of Machine Learning",
+      "provider": "Whizlabs",
+      "completionDate": "2025",
+      "level": "Intermediate",
+      "instructor": "Whizlabs team",
+      "description": "Understand the fundamentals of AI, ML, and Deep Learning, and their key differences. Implement supervised learning techniques like classification and regression. Apply clustering methods and time series analysis using ARIMA. Leverage NVIDIA RAPIDS for GPU-accelerated ML workflows.",
+      "skills": [
+        "Machine Learning",
+        "Deep Learning",
+        "Artificial Intelligence",
+        "Supervised Learning",
+        "Classification",
+        "Regression",
+        "Clustering",
+        "Time Series Analysis",
+        "ARIMA",
+        "NVIDIA RAPIDS",
+        "GPU-Accelerated ML"
+      ]
+    },
+    {
+      "id": "course3",
+      "title": "ChatGPT and Generative AI: The Big Picture",
+      "provider": "Pluralsight",
+      "completionDate": "2024",
+      "level": "Intermediate",
+      "duration": "35m",
+      "instructor": "Amber Israelsen",
+      "courseUrl": "https://www.pluralsight.com/courses/chatgpt-generative-ai-big-picture",
+      "description": "Get a foundational understanding of generative AI and how it works to create human-like responses. Explore ChatGPT capabilities and learn how generative AI can transform how you work, learn, and interact.",
+      "skills": [
+        "ChatGPT",
+        "Generative AI",
+        "Artificial Intelligence",
+        "AI Fundamentals",
+        "Natural Language Processing",
+        "AI Applications"
+      ]
+    },
+    {
+      "id": "course4",
+      "title": "Angular Best Practices",
+      "provider": "Pluralsight",
+      "completionDate": "2023",
+      "level": "Intermediate",
+      "duration": "2h 8m",
+      "instructor": "Jim Cooper",
+      "courseUrl": "https://www.pluralsight.com/courses/angular-best-practices",
+      "description": "Learn key best practices in Angular for building larger, more complex applications. Explore project and folder organization, module organization using Core, shared, and feature modules to avoid maintenance, organizational, and scalability issues.",
+      "skills": [
+        "Angular Best Practices",
+        "Project Organization",
+        "Folder Structure",
+        "Module Organization",
+        "Core Modules",
+        "Shared Modules",
+        "Feature Modules",
+        "Scalability",
+        "Maintainability"
+      ]
+    },
+    {
+      "id": "course5",
+      "title": "Node.js, Express, MongoDB & More: The Complete Bootcamp",
+      "provider": "Udemy",
+      "completionDate": "2022",
+      "level": "Intermediate",
+      "instructor": "Jonas Schmedtmann",
+      "courseUrl": "https://www.udemy.com/course/nodejs-express-mongodb-bootcamp/",
+      "description": "Master Node.js by building a real-world RESTful API and web app. Learn authentication, Node.js security, payment integration, and more in this comprehensive bootcamp covering Node.js, Express, MongoDB, and modern backend development.",
+      "skills": [
+        "Node.js",
+        "Express",
+        "MongoDB",
+        "RESTful API",
+        "Authentication",
+        "Node.js Security",
+        "Payment Integration",
+        "Backend Development",
+        "Web Applications",
+        "API Development"
+      ]
+    },
+    {
+      "id": "course2",
+      "title": "Angular Architecture and Best Practices",
+      "provider": "Pluralsight",
+      "completionDate": "2021",
+      "level": "Intermediate",
+      "duration": "5h 21m",
+      "instructor": "Dan Wahlin",
+      "courseUrl": "https://www.pluralsight.com/courses/angular-architecture-best-practices",
+      "description": "Learn architectural concepts, best practices, and how to solve challenging tasks in Angular. Discover component communication techniques, state management, code organization, and general best practices for building maintainable and scalable Angular applications.",
+      "skills": [
+        "Angular Architecture",
+        "Component Communication",
+        "State Management",
+        "Code Organization",
+        "Best Practices",
+        "Application Architecture",
+        "Maintainability",
+        "Refactoring"
+      ]
+    },
+    {
+      "id": "course6",
+      "title": "The Complete JavaScript Course: From Zero to Expert!",
+      "provider": "Udemy",
+      "completionDate": "2021",
+      "level": "Intermediate",
+      "instructor": "Jonas Schmedtmann",
+      "courseUrl": "https://www.udemy.com/course/the-complete-javascript-course/",
+      "description": "Master JavaScript with projects, challenges and theory. A comprehensive modern JavaScript course covering everything from fundamentals to advanced concepts, with hands-on projects and practical challenges.",
+      "skills": [
+        "JavaScript",
+        "ES6+",
+        "Modern JavaScript",
+        "JavaScript Fundamentals",
+        "JavaScript Advanced",
+        "Projects",
+        "Problem Solving",
+        "Web Development",
+        "Programming"
+      ]
+    },
+    {
+      "id": "course7",
+      "title": "Angular - The Complete Guide (2025 Edition)",
+      "provider": "Udemy",
+      "completionDate": "2021",
+      "level": "Intermediate",
+      "instructor": "Maximilian Schwarzmüller",
+      "courseUrl": "https://www.udemy.com/course/the-complete-guide-to-angular-2/",
+      "description": "Master Angular (formerly Angular 2) and build awesome, reactive web apps. A comprehensive guide covering all aspects of Angular development from fundamentals to advanced concepts for building modern web applications.",
+      "skills": [
+        "Angular",
+        "Angular 2+",
+        "Reactive Programming",
+        "Web Applications",
+        "TypeScript",
+        "Components",
+        "Services",
+        "Routing",
+        "Forms",
+        "HTTP",
+        "State Management"
+      ]
+    },
+    {
+      "id": "course1",
+      "title": "Angular Fundamentals",
+      "provider": "Pluralsight",
+      "completionDate": "2020",
+      "level": "Beginner",
+      "duration": "4h 53m",
+      "instructor": "Joe Eames, Jim Cooper",
+      "courseUrl": "https://www.pluralsight.com/courses/fundamentals-angular",
+      "description": "Learn the fundamentals of building applications with Angular, including components, template syntax, routing, services, forms, HTTP communication, modules, and testing.",
+      "skills": [
+        "Angular",
+        "Components",
+        "Template Syntax",
+        "Routing",
+        "Navigation",
+        "Services",
+        "Forms",
+        "HTTP",
+        "Angular Modules",
+        "Testing"
+      ]
+    },
+    {
+      "id": "course21",
+      "title": "React.js",
+      "provider": "Naseej AAS",
+      "completionDate": "2016",
+      "level": "Beginner",
+      "description": "Learn React.js fundamentals for building modern, interactive user interfaces and web applications.",
+      "skills": [
+        "React.js",
+        "Frontend Development",
+        "JavaScript",
+        "UI Development"
+      ]
+    },
+    {
+      "id": "course8",
+      "title": "Content Design Skills",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Learn essential content design skills for creating engaging and effective e-learning materials.",
+      "skills": [
+        "Content Design",
+        "E-Learning",
+        "Instructional Design"
+      ]
+    },
+    {
+      "id": "course9",
+      "title": "E-Content Design Tools",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Master tools and technologies used for designing e-content and digital learning materials.",
+      "skills": [
+        "E-Content Tools",
+        "Content Design",
+        "Digital Learning"
+      ]
+    },
+    {
+      "id": "course10",
+      "title": "E-Content Development Skills",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Develop skills for creating and developing effective e-learning content and materials.",
+      "skills": [
+        "E-Content Development",
+        "E-Learning",
+        "Content Creation"
+      ]
+    },
+    {
+      "id": "course11",
+      "title": "E-Content Development Tools",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Learn to use development tools and platforms for creating interactive e-learning content.",
+      "skills": [
+        "E-Content Tools",
+        "Development Tools",
+        "E-Learning Platforms"
+      ]
+    },
+    {
+      "id": "course12",
+      "title": "E-Learning Concepts Awareness",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Gain foundational understanding of e-learning concepts, methodologies, and best practices.",
+      "skills": [
+        "E-Learning",
+        "Learning Concepts",
+        "Educational Technology"
+      ]
+    },
+    {
+      "id": "course13",
+      "title": "Instruction Design Skills",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Learn instructional design principles and methodologies for creating effective learning experiences.",
+      "skills": [
+        "Instructional Design",
+        "Learning Design",
+        "Curriculum Development"
+      ]
+    },
+    {
+      "id": "course14",
+      "title": "Learning Management System Administration",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Master administration and management of Learning Management Systems (LMS) for educational platforms.",
+      "skills": [
+        "LMS Administration",
+        "Learning Management Systems",
+        "System Administration"
+      ]
+    },
+    {
+      "id": "course15",
+      "title": "Learning Theories & Instructional Strategies",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Explore learning theories and instructional strategies for designing effective educational programs.",
+      "skills": [
+        "Learning Theories",
+        "Instructional Strategies",
+        "Educational Psychology"
+      ]
+    },
+    {
+      "id": "course16",
+      "title": "Mobile Learning Basics",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Learn fundamentals of mobile learning and how to create mobile-friendly educational content.",
+      "skills": [
+        "Mobile Learning",
+        "M-Learning",
+        "Mobile Education"
+      ]
+    },
+    {
+      "id": "course17",
+      "title": "Social Networks for Learning",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Explore how social networks and social media can be leveraged for educational purposes and collaborative learning.",
+      "skills": [
+        "Social Learning",
+        "Social Networks",
+        "Collaborative Learning"
+      ]
+    },
+    {
+      "id": "course18",
+      "title": "Soft Skills",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Develop essential soft skills including communication, teamwork, leadership, and professional development.",
+      "skills": [
+        "Soft Skills",
+        "Communication",
+        "Teamwork",
+        "Leadership",
+        "Professional Development"
+      ]
+    },
+    {
+      "id": "course19",
+      "title": "eContent Design Standards",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Learn industry standards and best practices for designing e-content and digital learning materials.",
+      "skills": [
+        "E-Content Standards",
+        "Design Standards",
+        "Best Practices"
+      ]
+    },
+    {
+      "id": "course20",
+      "title": "eLearning Technologies",
+      "provider": "Information Technology Institute (ITI)",
+      "completionDate": "2014",
+      "level": "Beginner",
+      "description": "Comprehensive overview of technologies and tools used in e-learning and digital education platforms.",
+      "skills": [
+        "E-Learning Technologies",
+        "Educational Technology",
+        "Digital Learning Tools"
+      ]
+    },
+    {
+      "id": "course22",
+      "title": "Web Design",
+      "provider": "Mansoura University",
+      "completionDate": "2012",
+      "level": "Beginner",
+      "description": "Learn web design principles, user interface design, and creating visually appealing websites.",
+      "skills": [
+        "Web Design",
+        "UI Design",
+        "HTML",
+        "CSS",
+        "Design Principles"
+      ]
+    },
+    {
+      "id": "course23",
+      "title": "Web Development",
+      "provider": "Mansoura University",
+      "completionDate": "2012",
+      "level": "Beginner",
+      "description": "Master web development fundamentals including HTML, CSS, JavaScript, and building functional websites.",
+      "skills": [
+        "Web Development",
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Frontend Development"
+      ]
+    }
+  ]
+}

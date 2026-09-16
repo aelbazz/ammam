@@ -1,0 +1,286 @@
+{
+  "projects": [
+    {
+      "id": "proj1",
+      "name": "iHealth",
+      "description": "AI-powered platform for automated digital product audits and regulatory compliance. Evaluates performance, accessibility, security, and code quality using industry-standard tools, producing executive-ready reports aligned with DGA and enterprise governance requirements.",
+      "role": "Staff Developer - Digital Innovation",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "isStrategicInitiative": true,
+      "type": "Strategic Initiative → POC → MVP",
+      "technologies": ["Angular", "AI Integration", "TypeScript", "Automated Auditing", "Regulatory Compliance"],
+      "highlights": [
+        "AI-powered automated digital product audits",
+        "Performance, accessibility, security, and code quality evaluation",
+        "Executive-ready reports aligned with DGA and enterprise governance",
+        "Industry-standard tool integration"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj2",
+      "name": "Quality Mate (QMate)",
+      "description": "AI-driven quality engineering platform designed to enhance software delivery standards. Integrates AI agents into quality workflows to accelerate feedback cycles, improve consistency, and support engineering teams at scale.",
+      "role": "Staff Developer - Digital Innovation",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "isStrategicInitiative": true,
+      "type": "Strategic Initiative → POC → MVP",
+      "technologies": ["Angular", "AI Agents", "TypeScript", "Quality Engineering", "LangChain"],
+      "highlights": [
+        "AI-driven quality engineering platform",
+        "Accelerated feedback cycles with AI agents",
+        "Improved consistency and scalability",
+        "Enhanced software delivery standards"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj3",
+      "name": "Business AI",
+      "description": "Enterprise AI enablement platform focused on operationalizing AI across products. Supports AI agent orchestration, intelligent automation, and scalable integration aligned with business and regulatory needs.",
+      "role": "Staff Developer - Digital Innovation",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "isStrategicInitiative": true,
+      "type": "Strategic Initiative → POC → MVP",
+      "technologies": ["Angular", "AI Orchestration", "TypeScript", "Intelligent Automation", "LangChain"],
+      "highlights": [
+        "Enterprise AI enablement platform",
+        "AI agent orchestration and intelligent automation",
+        "Scalable integration aligned with business needs",
+        "Regulatory compliance support"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj4",
+      "name": "Developer Onboarding Platform",
+      "description": "Internal platform created to standardize and accelerate developer onboarding. Centralizes tools, standards, documentation, and best practices to improve productivity and reduce ramp-up time across engineering teams.",
+      "role": "Staff Developer - Digital Innovation",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "isStrategicInitiative": true,
+      "type": "Strategic Initiative → POC → MVP",
+      "technologies": ["Angular", "NestJS", "TypeScript", "AI Integration", "LangChain"],
+      "highlights": [
+        "Standardized developer onboarding process",
+        "Centralized tools, standards, and documentation",
+        "Improved productivity and reduced ramp-up time",
+        "Enhanced engineering team efficiency"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj5",
+      "name": "Saber Vehicles",
+      "description": "Digital platform enabling consumers to import vehicles into Saudi Arabia, including VIN-based validation and regulatory compliance workflows.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "Design System", "Azure DevOps", "VIN Validation"],
+      "highlights": [
+        "Vehicle import platform with VIN-based validation",
+        "Regulatory compliance workflows",
+        "Comprehensive product conformity assessment",
+        "Reusable component library implementation"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj6",
+      "name": "Halal Certification Platform",
+      "description": "Enterprise system for issuing and managing Halal certificates and official Halal marks, supporting regulatory compliance and audit processes.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Enterprise Platform",
+      "technologies": ["Angular", "TypeScript", "Certificate Management", "Regulatory Compliance"],
+      "highlights": [
+        "Halal certificate issuance and management",
+        "Official Halal marks support",
+        "Regulatory compliance and audit processes",
+        "Enterprise-grade system architecture"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj7",
+      "name": "SFDA Faseh",
+      "description": "Regulatory platform enabling importers to request product clearance, select conformity bodies, and receive risk-based inspection recommendations under SFDA governance.",
+      "role": "Staff Developer",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "Responsive Design", "Azure"],
+      "highlights": [
+        "Product clearance request system",
+        "Conformity body selection",
+        "Risk-based inspection recommendations",
+        "Modernized platform with enhanced UX"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj8",
+      "name": "Maneh",
+      "description": "AI-assisted certification platform under SFDA supervision. Supports manufacturers and suppliers in obtaining product compliance certificates across energy efficiency, quality marks, and conformity standards through a full end-to-end digital journey.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2021",
+      "endDate": "2024",
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "AI Integration", "Certificate Management"],
+      "highlights": [
+        "AI-assisted certification platform",
+        "Product compliance certificate management",
+        "Energy efficiency and quality marks support",
+        "End-to-end digital journey"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj9",
+      "name": "MOC Abdea",
+      "description": "Cultural licensing platform empowering practitioners and creatives to obtain cultural licenses, supporting the growth of Saudi Arabia's cultural sector.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "SASS", "Responsive Design"],
+      "highlights": [
+        "Cultural licensing platform",
+        "Supporting cultural practitioners and creatives",
+        "Pixel-perfect UI implementations",
+        "Accessible and user-friendly interfaces"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj10",
+      "name": "Dayyaf",
+      "description": "Property Management System enabling investors to license, manage, and promote rental units through compliant, digital workflows.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Property Management System",
+      "technologies": ["Angular", "TypeScript", "Property Management", "Digital Workflows"],
+      "highlights": [
+        "Property licensing and management",
+        "Rental unit promotion",
+        "Compliant digital workflows",
+        "Investor-focused platform"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj11",
+      "name": "E-Mazad",
+      "description": "National electronic auction platform facilitating secure asset and product auctions in compliance with Saudi regulations, improving transparency and market fairness.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "E-Commerce Platform",
+      "technologies": ["Angular", "TypeScript", "Real-time Features", "Payment Integration"],
+      "highlights": [
+        "National electronic auction platform",
+        "Secure asset and product auctions",
+        "Regulatory compliance",
+        "Real-time bidding system"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj12",
+      "name": "Wathq",
+      "description": "Government data integration platform providing secure electronic access to national data, enabling digital transformation and reducing operational overhead.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2015",
+      "endDate": "2024",
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "Data Integration", "API Integration"],
+      "highlights": [
+        "Government data integration platform",
+        "Secure electronic access to national data",
+        "Digital transformation enablement",
+        "Reduced operational overhead"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj13",
+      "name": "Muse",
+      "description": "Internal product documentation and file management solution. Provides structured product profiles covering scope, risks, milestones, deliverables, and stakeholder alignment.",
+      "role": "Staff Developer - Digital Innovation",
+      "startDate": "2024",
+      "endDate": null,
+      "isCurrent": true,
+      "type": "Internal Platform",
+      "technologies": ["Angular", "TypeScript", "Document Management", "Product Documentation"],
+      "highlights": [
+        "Product documentation and file management",
+        "Structured product profiles",
+        "Scope, risks, milestones, and deliverables tracking",
+        "Stakeholder alignment features"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj14",
+      "name": "NCFB (National Center for Family Businesses)",
+      "description": "Platform designed to support and develop family-owned enterprises, enhancing competitiveness and contribution to Saudi Arabia's GDP.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Business Platform",
+      "technologies": ["Angular", "TypeScript", "Business Management", "Enterprise Features"],
+      "highlights": [
+        "Support for family-owned enterprises",
+        "Enhanced competitiveness",
+        "GDP contribution tracking",
+        "Comprehensive business management features"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj15",
+      "name": "Franchise Center Platform",
+      "description": "National platform established under the General Authority for SMEs to regulate, promote, and educate stakeholders on commercial franchising activities.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2019",
+      "endDate": "2024",
+      "type": "Government Platform",
+      "technologies": ["Angular", "TypeScript", "Franchise Management", "Regulatory Compliance"],
+      "highlights": [
+        "National franchising platform",
+        "Regulation and promotion of commercial franchising",
+        "Stakeholder education and support",
+        "SME-focused features"
+      ],
+      "company": "THIQAH"
+    },
+    {
+      "id": "proj16",
+      "name": "Maroof",
+      "description": "E-commerce trust and reputation platform developed with the Saudi Ministry of Commerce to enhance buyer–seller transparency and increase the success rate of online businesses.",
+      "role": "Senior Frontend Developer / Staff Developer",
+      "startDate": "2016",
+      "endDate": "2024",
+      "type": "E-Commerce Platform",
+      "technologies": ["Angular", "TypeScript", "Reputation System", "E-Commerce"],
+      "highlights": [
+        "E-commerce trust and reputation platform",
+        "Enhanced buyer-seller transparency",
+        "Increased online business success rate",
+        "Ministry of Commerce partnership"
+      ],
+      "company": "THIQAH"
+    }
+  ]
+}

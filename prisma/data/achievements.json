@@ -1,0 +1,95 @@
+{
+  "achievements": [
+    {
+      "id": "ach1",
+      "title": "NVIDIA Certification: Fundamentals of Machine Learning",
+      "description": "Completed comprehensive NVIDIA certification covering core concepts of AI and Machine Learning, including supervised learning, clustering, time series analysis, and GPU-accelerated ML with NVIDIA RAPIDS. Applying these concepts in practical, data-driven AI solutions.",
+      "date": "2025",
+      "category": "certification",
+      "organization": "NVIDIA / Whizlabs",
+      "icon": "bi-award-fill"
+    },
+    {
+      "id": "ach2",
+      "title": "Second Place - Elm Company Hackathon",
+      "description": "Achieved Second Place with Agent X team in Elm Company Hackathon. Presented an integrated AI solution using Nuha LLM, OpenAI LLM, Custom RAG, LangChain, CrewAI, FastAPI, NestJS, Angular, Bootstrap, and Vector Database. The project received deep admiration from senior judges and executive leaders.",
+      "date": "2025",
+      "category": "award",
+      "organization": "Elm Company",
+      "icon": "bi-trophy-fill"
+    },
+    {
+      "id": "ach3",
+      "title": "iHealth Product Presentation at LEAP 2025",
+      "description": "Proud to be part of the Digital Innovation team at THIQAH, presenting iHealth product at LEAP 2025. Showcased innovative healthcare solution born from our team's collaboration and innovation.",
+      "date": "Feb 2025",
+      "category": "recognition",
+      "organization": "LEAP 2025 / THIQAH",
+      "icon": "bi-presentation-fill"
+    },
+    {
+      "id": "ach4",
+      "title": "Published Technical Article: Azure AD SSO Integration in Angular",
+      "description": "Published comprehensive technical article on Medium about integrating Azure Active Directory Single Sign-On (SSO) in Angular applications. Shared expertise to help developers enhance their app's authentication with Azure AD.",
+      "date": "2024",
+      "category": "recognition",
+      "organization": "Medium",
+      "icon": "bi-file-text-fill",
+      "articleUrl": "https://medium.com/@ahmed.elbazz.2010/integrating-azure-active-directory-sso-in-your-angular-application-f8c655b1fa32"
+    },
+    {
+      "id": "ach5",
+      "title": "Certificate of Appreciation - Outstanding Contributions",
+      "description": "Recognized for outstanding contributions within the development department and projects, including AI hackathons. Acknowledged for exceptional dedication, technical excellence, and innovation in digital transformation initiatives.",
+      "date": "2024",
+      "category": "recognition",
+      "organization": "THIQAH",
+      "icon": "bi-award-fill"
+    },
+    {
+      "id": "ach6",
+      "title": "First Place - THIQAH Hackathon",
+      "description": "Won 1st place at THIQAH Hackathon with an AI-powered voice recognition tool designed to help people with disabilities. A significant achievement towards inclusive technology and accessibility.",
+      "date": "2023",
+      "category": "award",
+      "organization": "THIQAH",
+      "icon": "bi-trophy-fill"
+    },
+    {
+      "id": "ach7",
+      "title": "Certificate of Appreciation - Outstanding Contributions",
+      "description": "Recognized for outstanding contributions within the development department and projects. Acknowledged for exceptional technical skills, teamwork, and commitment to delivering high-quality solutions.",
+      "date": "2023",
+      "category": "recognition",
+      "organization": "THIQAH",
+      "icon": "bi-award-fill"
+    },
+    {
+      "id": "ach8",
+      "title": "THIQAH Awards - Multiple Recognitions",
+      "description": "Recognized with multiple THIQAH Awards for embodying company values: Trust, Responsibility, Cooperation, Flexibility, and Innovation. Acknowledged for consistent demonstration of these core values in daily work and project delivery.",
+      "date": "2019-2024",
+      "category": "recognition",
+      "organization": "THIQAH",
+      "icon": "bi-star-fill"
+    },
+    {
+      "id": "ach9",
+      "title": "Certificate of Appreciation - Outstanding Contributions",
+      "description": "Recognized for outstanding contributions within the development department and projects. Acknowledged for dedication to excellence and significant impact on team success.",
+      "date": "2022",
+      "category": "recognition",
+      "organization": "THIQAH",
+      "icon": "bi-award-fill"
+    },
+    {
+      "id": "ach10",
+      "title": "Best Employee of the Year",
+      "description": "Recognized as the best employee at Naseej company for outstanding performance, dedication, and contributions to the team's success. Awarded for exceptional technical skills, leadership, and commitment to delivering high-quality solutions.",
+      "date": "2018",
+      "category": "award",
+      "organization": "Naseej AAS",
+      "icon": "bi-star-fill"
+    }
+  ]
+}

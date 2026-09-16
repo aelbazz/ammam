@@ -1,0 +1,166 @@
+{
+  "events": [
+    {
+      "id": "evt1",
+      "date": "Feb 2025",
+      "title": "iHealth Product Presentation at LEAP 2025",
+      "subtitle": "Digital Innovation at THIQAH",
+      "description": "Presented iHealth product at LEAP 2025 as part of the Digital Innovation team, showcasing innovative healthcare solution integrating AI and automation.",
+      "type": "achievement",
+      "icon": "bi-presentation-fill"
+    },
+    {
+      "id": "evt2",
+      "date": "2025",
+      "title": "Second Place - Elm Company Hackathon",
+      "subtitle": "Agent X Team - AI Integration",
+      "description": "Achieved Second Place with integrated AI solution using Nuha LLM, OpenAI LLM, LangChain, CrewAI, FastAPI, NestJS, and Angular. Received admiration from senior judges and executive leaders.",
+      "type": "achievement",
+      "icon": "bi-trophy-fill"
+    },
+    {
+      "id": "evt3",
+      "date": "2025",
+      "title": "NVIDIA Certification: Machine Learning Fundamentals",
+      "subtitle": "AI & ML Skills Development",
+      "description": "Completed NVIDIA certification covering AI, ML, Deep Learning, supervised learning, clustering, time series analysis, and GPU-accelerated ML with NVIDIA RAPIDS.",
+      "type": "education",
+      "icon": "bi-award-fill"
+    },
+    {
+      "id": "evt4",
+      "date": "Jan 2024",
+      "title": "Promoted to Staff Developer - Digital Innovation Unit",
+      "subtitle": "THIQAH Business Services Co.",
+      "description": "Leading initiatives bridging development and R&D teams. Established AI Integration & Adoption Unit. Transformed concepts into MVPs for iHealth, Quality Mate, and Business AI.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt5",
+      "date": "2024",
+      "title": "Published Technical Article on Medium",
+      "subtitle": "Azure AD SSO Integration in Angular",
+      "description": "Authored comprehensive technical guide sharing expertise on integrating Azure Active Directory Single Sign-On in Angular applications with the developer community.",
+      "type": "achievement",
+      "icon": "bi-file-text-fill"
+    },
+    {
+      "id": "evt6",
+      "date": "2023",
+      "title": "First Place - THIQAH Hackathon",
+      "subtitle": "AI-Powered Accessibility Solution",
+      "description": "Won 1st place with an AI-powered voice recognition tool designed to help people with disabilities, advancing inclusive technology and accessibility.",
+      "type": "achievement",
+      "icon": "bi-trophy-fill"
+    },
+    {
+      "id": "evt7",
+      "date": "Sep 2022",
+      "title": "Promoted to Staff Developer - Engineering Team",
+      "subtitle": "THIQAH Business Services Co.",
+      "description": "Supported CI/CD, containerization, and DevOps practices across enterprise platforms. Contributed to backend and frontend integration using TypeScript, NestJS, ABP Framework, Keycloak, and Vault.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt8",
+      "date": "Jul 2019",
+      "title": "Joined THIQAH as Senior Frontend Developer",
+      "subtitle": "THIQAH Business Services - Riyadh, Saudi Arabia",
+      "description": "Started journey with THIQAH, delivering high-quality Angular solutions and reusable design system components. Mentored team members and promoted frontend best practices.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt9",
+      "date": "2019-2025",
+      "title": "Delivered 25+ Large-Scale Government Projects",
+      "subtitle": "SASO, Ministry of Culture, SFDA & More",
+      "description": "Successfully delivered major government platforms including SABER, Abdea, MAZAD, MOWATHIQ, WATHIQ, FASEH, and many more, serving millions of users across Saudi Arabia.",
+      "type": "achievement",
+      "icon": "bi-trophy-fill"
+    },
+    {
+      "id": "evt10",
+      "date": "2018",
+      "title": "Best Employee of the Year Award",
+      "subtitle": "Naseej AAS",
+      "description": "Recognized as the best employee at Naseej company for outstanding performance, dedication, technical excellence, and contributions to the team's success.",
+      "type": "achievement",
+      "icon": "bi-star-fill"
+    },
+    {
+      "id": "evt11",
+      "date": "Aug 2017",
+      "title": "Promoted to Senior Frontend / UI Developer",
+      "subtitle": "Naseej AAS - Cairo, Egypt",
+      "description": "Promoted to senior role, leading frontend development initiatives and mentoring junior developers. Developed enterprise web applications and optimized UI workflows.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt12",
+      "date": "Apr 2016",
+      "title": "Joined Roqay as Frontend Developer",
+      "subtitle": "Mazaya Integrated Solutions Co. - Mansoura, Egypt",
+      "description": "Focused on creating polished production-quality interfaces with attention to user interaction details and visual composition.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt13",
+      "date": "2014-2016",
+      "title": "Completed Diploma in Computer Science",
+      "subtitle": "Mansoura University, Faculty of Specific Education",
+      "description": "Advanced diploma program covering software development, web technologies, programming, and computer applications.",
+      "type": "education",
+      "icon": "bi-mortarboard-fill"
+    },
+    {
+      "id": "evt14",
+      "date": "Jul 2015",
+      "title": "Started Professional Career at Deltasoft",
+      "subtitle": "Frontend Developer - Mansoura, Egypt",
+      "description": "Began professional software development career, delivering interactive and responsive web interfaces.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt15",
+      "date": "Jun 2015",
+      "title": "Completed ITI Training Program as Team Leader",
+      "subtitle": "Information Technology Institute - eLearning Track",
+      "description": "Successfully completed intensive 9-month training in eLearning Technologies Specialist Track at ITI intake 35 with Very Good grade, serving as Team Leader.",
+      "type": "education",
+      "icon": "bi-mortarboard-fill"
+    },
+    {
+      "id": "evt16",
+      "date": "May 2015",
+      "title": "E-Content Developer at Harf IT",
+      "subtitle": "Knowledge Transfer Program (KTP)",
+      "description": "Created instructional content and interactive e-learning materials, applying instructional design principles.",
+      "type": "work",
+      "icon": "bi-briefcase-fill"
+    },
+    {
+      "id": "evt17",
+      "date": "Oct 2014",
+      "title": "Started ITI Training Program",
+      "subtitle": "Information Technology Institute - Mansoura Branch",
+      "description": "Began intensive professional training program in e-learning technologies at ITI, selected as Team Leader for eLearning technologies specialist track. Selective scholarship bridging academic knowledge with ICT market needs.",
+      "type": "education",
+      "icon": "bi-mortarboard-fill"
+    },
+    {
+      "id": "evt18",
+      "date": "2009-2013",
+      "title": "Bachelor of Specific Education - Computer Department",
+      "subtitle": "Mansoura University, Egypt",
+      "description": "Completed Bachelor's degree in Specific Education with specialization in Computer Department, achieving Good grade. Covered educational technology, computer science fundamentals, and instructional methodologies.",
+      "type": "education",
+      "icon": "bi-mortarboard-fill"
+    }
+  ]
+}

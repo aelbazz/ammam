@@ -1,0 +1,31 @@
+{
+  "email": "ahmed.elbazz.2010@gmail.com",
+  "phone": "+966548926532",
+  "whatsapp": "+966548926532",
+  "linkedin": "https://www.linkedin.com/in/elbazz",
+  "muchskills": "https://app.muchskills.com/user/amahgoub",
+  "location": "Riyadh, Saudi Arabia",
+  "birthday": "June 26",
+  "socialLinks": [
+    {
+      "platform": "LinkedIn",
+      "url": "https://www.linkedin.com/in/elbazz",
+      "icon": "bi-linkedin"
+    },
+    {
+      "platform": "MuchSkills",
+      "url": "https://app.muchskills.com/user/amahgoub",
+      "icon": "bi-diagram-3"
+    },
+    {
+      "platform": "Medium",
+      "url": "https://medium.com/@ahmed.elbazz.2010",
+      "icon": "bi-medium"
+    },
+    {
+      "platform": "GitHub",
+      "url": "https://github.com/aelbazz",
+      "icon": "bi-github"
+    }
+  ]
+}

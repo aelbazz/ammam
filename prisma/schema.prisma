@@ -1,0 +1,566 @@
+// Prisma schema for the profile backend.
+//
+// Every model, field and nullability decision here is derived from the existing Angular
+// project's interfaces (src/app/core/models/*.model.ts) and static data
+// (public/assets/data/*.json). See docs/MIGRATION-MAPPING.md for the field-by-field
+// justification, including the three deliberate additions (sortOrder, isPublished, skills).
+//
+// Conventions:
+//   - @@map / @map give the tables and columns the snake_case names used by the existing
+//     domain vocabulary (person, exp_responsibility, proj_technology, ...).
+//   - legacyId preserves the original string ids ("exp1", "proj14") that the frontend
+//     already uses for tracking and for #project-<id> deep links.
+//   - Date-like fields are String because the source data is human-formatted free text at
+//     inconsistent precision ("Jan 2024", "2025", "June 26"). See MIGRATION-MAPPING §4.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Runtime connection. On Supabase this is the TRANSACTION pooler (port 6543), which
+  // suits short-lived serverless/container connections.
+  url       = env("DATABASE_URL")
+  // Migrations and introspection need a direct session connection: PgBouncer in
+  // transaction mode cannot run the advisory locks and prepared statements Prisma Migrate
+  // relies on. On Supabase this is the SESSION pooler / direct connection (port 5432).
+  // For a plain local Postgres, set DIRECT_URL to the same value as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+/// Values observed in achievements.json: award (3), certification (1), recognition (6).
+/// `milestone` is declared by the frontend interface but unused in data; kept so the admin
+/// portal can use it without a migration.
+enum AchievementCategory {
+  award
+  certification
+  recognition
+  milestone
+
+  @@map("achievement_category")
+}
+
+/// Values observed in timeline.json: work (7), achievement (6), education (5).
+/// `project` and `certification` are declared by the frontend interface but unused in data.
+enum TimelineEventType {
+  work
+  education
+  achievement
+  project
+  certification
+
+  @@map("timeline_event_type")
+}
+
+/// The frontend interface declares 'high' | 'low', but management.json actually contains
+/// high (2) and medium (1) - and the component filters for 'low', so the medium row renders
+/// nowhere today. All three are modelled; see MIGRATION-MAPPING §5.4.
+enum ManagementLevel {
+  high
+  medium
+  low
+
+  @@map("management_level")
+}
+
+// ---------------------------------------------------------------------------
+// Person - the central profile entity (singleton for this application)
+// ---------------------------------------------------------------------------
+
+model Person {
+  id     String @id @default(cuid())
+  /// Addressable key for the singleton; seeded as "default". Leaves room for multiple
+  /// profiles later without over-engineering now.
+  slug   String @unique
+
+  name              String
+  title             String
+  summary           String @db.Text
+  location          String
+  yearsOfExperience Int    @map("years_of_experience")
+  avatar            String
+  tagline           String
+  linkedin          String?
+  birthday          String?
+
+  contact          Contact?
+  experiences      Experience[]
+  projects         Project[]
+  achievements     Achievement[]
+  courses          Course[]
+  timelineEvents   TimelineEvent[]
+  managementRoles  ManagementRole[]
+  skillCategories  SkillCategory[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("person")
+}
+
+// ---------------------------------------------------------------------------
+// Contact - 1:1 with person
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id String @id @default(cuid())
+
+  personId String @unique @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  email      String
+  phone      String
+  whatsapp   String
+  linkedin   String
+  location   String?
+  birthday   String?
+  muchskills String?
+
+  socialLinks ContactSocialLink[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("contact")
+}
+
+model ContactSocialLink {
+  id String @id @default(cuid())
+
+  contactId String  @map("contact_id")
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  platform  String
+  url       String
+  icon      String?
+  sortOrder Int     @map("sort_order")
+
+  @@index([contactId, sortOrder])
+  @@map("contact_social_link")
+}
+
+// ---------------------------------------------------------------------------
+// Experience
+// ---------------------------------------------------------------------------
+
+model Experience {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  company            String
+  companyFullName    String? @map("company_full_name")
+  companyLogo        String? @map("company_logo")
+  companyWebsite     String? @map("company_website")
+  companyDescription String? @map("company_description") @db.Text
+  position           String
+  location           String
+  startDate          String  @map("start_date")
+  endDate            String? @map("end_date")
+  isCurrent          Boolean @map("is_current")
+  description        String  @db.Text
+
+  responsibilities ExperienceResponsibility[]
+  achievements     ExperienceAchievement[]
+  technologies     ExperienceTechnology[]
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("experience")
+}
+
+model ExperienceResponsibility {
+  id String @id @default(cuid())
+
+  experienceId String     @map("experience_id")
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  description String @db.Text
+  sortOrder   Int    @map("sort_order")
+
+  @@index([experienceId, sortOrder])
+  @@map("exp_responsibility")
+}
+
+model ExperienceAchievement {
+  id String @id @default(cuid())
+
+  experienceId String     @map("experience_id")
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  description String @db.Text
+  sortOrder   Int    @map("sort_order")
+
+  @@index([experienceId, sortOrder])
+  @@map("exp_achievement")
+}
+
+/// Junction: experience <-> technology (many-to-many).
+model ExperienceTechnology {
+  experienceId String     @map("experience_id")
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  technologyId String     @map("technology_id")
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  sortOrder Int @map("sort_order")
+
+  @@id([experienceId, technologyId])
+  @@index([experienceId, sortOrder])
+  @@index([technologyId])
+  @@map("exp_technology")
+}
+
+// ---------------------------------------------------------------------------
+// Project
+// ---------------------------------------------------------------------------
+
+model Project {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String  @db.Text
+  role        String
+  startDate   String  @map("start_date")
+  endDate     String? @map("end_date")
+
+  /// Present in projects.json (all 16 rows) but absent from the frontend Project interface.
+  type    String?
+  /// Present in projects.json (all 16 rows) but absent from the frontend Project interface.
+  company String?
+  /// Present in projects.json (6/16) but absent from the frontend Project interface.
+  isCurrent Boolean @default(false) @map("is_current")
+
+  isStrategicInitiative Boolean @default(false) @map("is_strategic_initiative")
+
+  /// Declared by the frontend interface and rendered conditionally, but absent from all
+  /// 16 current records. Kept nullable rather than dropped.
+  imageUrl  String? @map("image_url")
+  githubUrl String? @map("github_url")
+  liveUrl   String? @map("live_url")
+
+  highlights   ProjectHighlight[]
+  technologies ProjectTechnology[]
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("project")
+}
+
+model ProjectHighlight {
+  id String @id @default(cuid())
+
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  description String @db.Text
+  sortOrder   Int    @map("sort_order")
+
+  @@index([projectId, sortOrder])
+  @@map("proj_highlight")
+}
+
+/// Junction: project <-> technology (many-to-many).
+model ProjectTechnology {
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  technologyId String     @map("technology_id")
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  sortOrder Int @map("sort_order")
+
+  @@id([projectId, technologyId])
+  @@index([projectId, sortOrder])
+  @@index([technologyId])
+  @@map("proj_technology")
+}
+
+// ---------------------------------------------------------------------------
+// Technology - reusable across experiences and projects
+// ---------------------------------------------------------------------------
+
+model Technology {
+  id String @id @default(cuid())
+
+  /// Display name, preserving the casing of its first occurrence in the source data.
+  name String @unique
+  /// Normalised matching key (lower-cased, punctuation collapsed) so "Node.js" and "NodeJS"
+  /// cannot split into two rows. This is what the seed and the attach endpoints upsert on.
+  slug String @unique
+
+  experiences ExperienceTechnology[]
+  projects    ProjectTechnology[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("technology")
+}
+
+// ---------------------------------------------------------------------------
+// Achievement
+// ---------------------------------------------------------------------------
+
+model Achievement {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String              @db.Text
+  date         String
+  category     AchievementCategory
+  organization String?
+  icon         String?
+  articleUrl   String?             @map("article_url")
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("achievement")
+}
+
+// ---------------------------------------------------------------------------
+// Course
+// ---------------------------------------------------------------------------
+
+model Course {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  title          String
+  provider       String
+  completionDate String  @map("completion_date")
+  /// Free text mixing degree level (Diploma, Bachelor's Degree) with difficulty
+  /// (Beginner, Intermediate). Deliberately not an enum - see MIGRATION-MAPPING §5.8.
+  level          String?
+  description    String? @db.Text
+  duration       String?
+  instructor     String?
+  courseUrl      String? @map("course_url")
+  /// Declared by the frontend interface, absent from all 27 records.
+  certificateUrl String? @map("certificate_url")
+  /// Present in courses.json (3/27), absent from the frontend interface.
+  startDate      String? @map("start_date")
+  /// Present in courses.json (2/27), absent from the frontend interface.
+  grade          String?
+
+  skills CourseSkill[]
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("course")
+}
+
+/// Course topics. Deliberately NOT joined to Technology: 147 references across 114 distinct
+/// values that are mostly subjects ("Instructional Design"), not technologies.
+model CourseSkill {
+  id String @id @default(cuid())
+
+  courseId String @map("course_id")
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  name      String
+  sortOrder Int    @map("sort_order")
+
+  @@index([courseId, sortOrder])
+  @@map("course_skill")
+}
+
+// ---------------------------------------------------------------------------
+// Timeline
+// ---------------------------------------------------------------------------
+
+model TimelineEvent {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  date        String
+  title       String
+  subtitle    String?
+  description String            @db.Text
+  type        TimelineEventType
+  icon        String?
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("timeline_event")
+}
+
+// ---------------------------------------------------------------------------
+// Management role - a separate concept from Experience, never merged with it
+// ---------------------------------------------------------------------------
+
+model ManagementRole {
+  id       String @id @default(cuid())
+  legacyId String @unique @map("legacy_id")
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  level        ManagementLevel
+  title        String
+  organization String
+  startDate    String          @map("start_date")
+  endDate      String?         @map("end_date")
+  isCurrent    Boolean         @map("is_current")
+  description  String          @db.Text
+  /// Declared by the frontend interface, absent from all 3 records.
+  teamSize     Int?            @map("team_size")
+
+  keyResponsibilities ManagementResponsibilityItem[]
+  achievements        ManagementAchievement[]
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, sortOrder])
+  @@map("mgmt_role")
+}
+
+model ManagementResponsibilityItem {
+  id String @id @default(cuid())
+
+  managementRoleId String         @map("mgmt_role_id")
+  managementRole   ManagementRole @relation(fields: [managementRoleId], references: [id], onDelete: Cascade)
+
+  description String @db.Text
+  sortOrder   Int    @map("sort_order")
+
+  @@index([managementRoleId, sortOrder])
+  @@map("mgmt_responsibility")
+}
+
+model ManagementAchievement {
+  id String @id @default(cuid())
+
+  managementRoleId String         @map("mgmt_role_id")
+  managementRole   ManagementRole @relation(fields: [managementRoleId], references: [id], onDelete: Cascade)
+
+  description String @db.Text
+  sortOrder   Int    @map("sort_order")
+
+  @@index([managementRoleId, sortOrder])
+  @@map("mgmt_achievement")
+}
+
+// ---------------------------------------------------------------------------
+// Skills - addition, see MIGRATION-MAPPING §5.3
+// ---------------------------------------------------------------------------
+
+model SkillCategory {
+  id String @id @default(cuid())
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  name String
+
+  skills Skill[]
+
+  sortOrder   Int     @map("sort_order")
+  isPublished Boolean @default(true) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([personId, name])
+  @@index([personId, sortOrder])
+  @@map("skill_category")
+}
+
+model Skill {
+  id String @id @default(cuid())
+
+  categoryId String        @map("category_id")
+  category   SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  name String
+  /// 0-9. 0 means "unranked" and the UI renders it as a grey no-rank tag - it is NOT the
+  /// same as level 1, so it must never be coerced.
+  level Int
+  /// Year the skill was first used. Present on all 117 source records.
+  since Int?
+  /// Declared by the frontend Skill interface, absent from all 117 records. The frontend
+  /// resolves icons at runtime via SkillIconService.
+  icon              String?
+  yearsOfExperience Int?    @map("years_of_experience")
+  endorsements      Int?
+
+  sortOrder Int @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([categoryId, name])
+  @@index([categoryId, sortOrder])
+  @@map("skill")
+}
+
+// ---------------------------------------------------------------------------
+// Auth - never exposed through any public endpoint
+// ---------------------------------------------------------------------------
+
+model AdminUser {
+  id String @id @default(cuid())
+
+  email        String @unique
+  /// Argon2id hash. Never selected into a response DTO.
+  passwordHash String @map("password_hash")
+  name         String?
+
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_user")
+}

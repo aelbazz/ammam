@@ -1,0 +1,777 @@
+{
+  "categories": [
+    {
+      "category": "Leadership & People Management",
+      "skills": [
+        {
+          "name": "Leadership",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2017
+        },  
+        {
+          "name": "Mentoring & Coaching",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2017
+        },
+        {
+          "name": "Accountability & Ownership",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2019
+        },
+        {
+          "name": "Psychological Safety",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2019
+        },
+        {
+          "name": "Respect",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2012
+        },
+        {
+          "name": "Employee Onboarding",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2019
+        },
+        {
+          "name": "Facilitation of Meetings",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2019
+        },
+        {
+          "name": "Team Coordination",
+          "level": 0,
+          "category": "Leadership & People Management",
+          "since": 2019
+        }
+      ]
+    },
+    {
+      "category": "Communication & Collaboration",
+      "skills": [
+        {
+          "name": "Communication",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2012
+        },
+        {
+          "name": "Leadership Communication",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2017
+        },
+        {
+          "name": "Public Speaking",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2019
+        },
+        {
+          "name": "Interpersonal Relationships",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2012
+        },
+        {
+          "name": "Teamwork & Collaboration",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2012
+        },
+        {
+          "name": "Collaboration",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2012
+        },
+        {
+          "name": "Social Perceptiveness",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2015
+        },
+        {
+          "name": "Cross-functional Coordination",
+          "level": 0,
+          "category": "Communication & Collaboration",
+          "since": 2019
+        }
+      ]
+    },
+    {
+      "category": "Professional & Cognitive Skills",
+      "skills": [
+        {
+          "name": "Critical Thinking",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2015
+        },
+        {
+          "name": "Problem Solving",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2015
+        },
+        {
+          "name": "Problem-Solving",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2015
+        },
+        {
+          "name": "Understanding the Big Picture",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2019
+        },
+        {
+          "name": "Focus on Quality",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2015
+        },
+        {
+          "name": "Attention to Detail",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2015
+        },
+        {
+          "name": "Creativity & Innovation",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2019
+        },
+        {
+          "name": "Decision Making",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2019
+        },
+        {
+          "name": "Risk Management",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2019
+        },
+        {
+          "name": "Continuous Improvement Mindset",
+          "level": 0,
+          "category": "Professional & Cognitive Skills",
+          "since": 2019
+        }
+      ]
+    },
+    {
+      "category": "Project & Delivery Management",
+      "skills": [
+        {
+          "name": "Project Management",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        },
+        {
+          "name": "Agile Coaching & Facilitation",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        },
+        {
+          "name": "Backlog Refinement & Grooming",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        },
+        {
+          "name": "Time Management",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        },
+        {
+          "name": "Organizational Skills",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        },
+        {
+          "name": "Delivery Coordination",
+          "level": 0,
+          "category": "Project & Delivery Management",
+          "since": 2025
+        }
+      ]
+    },
+    {
+      "category": "Methodologies & Frameworks",
+      "skills": [
+        {
+          "name": "Agile / Scrum",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2015
+        },
+        {
+          "name": "Agile Methodology",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2015
+        },
+        {
+          "name": "SCRUM",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2015
+        },
+        {
+          "name": "Product-Oriented Thinking",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2019
+        },
+        {
+          "name": "Design Thinking",
+          "level": 6,
+          "category": "Methodologies & Frameworks",
+          "since": 2020
+        },
+        {
+          "name": "SMACSS (Scalable and Modular Architecture for CSS)",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2019
+        },
+        {
+          "name": "Design Systems",
+          "level": 9,
+          "category": "Methodologies & Frameworks",
+          "since": 2019
+        }
+      ]
+    },
+    {
+      "category": "Software Engineering & Architecture",
+      "skills": [
+        {
+          "name": "Frontend / UI Engineering",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2012
+        },
+        {
+          "name": "Data Structures",
+          "level": 6,
+          "category": "Software Engineering & Architecture",
+          "since": 2014
+        },
+        {
+          "name": "Algorithms",
+          "level": 7,
+          "category": "Software Engineering & Architecture",
+          "since": 2014
+        },
+        {
+          "name": "REST API",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        },
+        {
+          "name": "RESTful API Design",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        },
+        {
+          "name": "JSON",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        },
+        {
+          "name": "XML",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        },
+        {
+          "name": "Responsive Web Design",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        },
+        {
+          "name": "PWA (Progressive Web Apps)",
+          "level": 6,
+          "category": "Software Engineering & Architecture",
+          "since": 2020
+        },
+        {
+          "name": "LitElement",
+          "level": 3,
+          "category": "Software Engineering & Architecture",
+          "since": 2021
+        },
+        {
+          "name": "Cross-browser Compatibility",
+          "level": 9,
+          "category": "Software Engineering & Architecture",
+          "since": 2015
+        }
+       
+      ]
+    },
+    {
+      "category": "Frontend Technologies",
+      "skills": [
+        {
+          "name": "HTML 5",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2012
+        },
+        {
+          "name": "CSS",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2012
+        },
+        {
+          "name": "Sass",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2015
+        },
+        {
+          "name": "Bootstrap",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2015
+        },
+        {
+          "name": "JavaScript (ES6+)",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2012
+        },
+        {
+          "name": "Angular (Angular 2+)",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2017
+        },
+        {
+          "name": "TypeScript",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2017
+        },
+        {
+          "name": "Angular Material",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2019
+        },
+        {
+          "name": "RxJS",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2017
+        },
+        {
+          "name": "Tailwind CSS",
+          "level": 3,
+          "category": "Frontend Technologies",
+          "since": 2023
+        },
+        {
+          "name": "Ngx-Bootstrap",
+          "level": 9,
+          "category": "Frontend Technologies",
+          "since": 2019
+        },
+        {
+          "name": "React",
+          "level": 3,
+          "category": "Frontend Technologies",
+          "since": 2016
+        },
+        {
+          "name": "Vue.js",
+          "level": 3,
+          "category": "Frontend Technologies",
+          "since": 2020
+        }
+      ]
+    },
+    {
+      "category": "Backend, DevOps & Cloud",
+      "skills": [
+        {
+          "name": "Node.js",
+          "level": 9,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "NestJS",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Express",
+          "level": 3,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": ".NET Core",
+          "level": 3,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2025
+        },
+        {
+          "name": "ABP Framework",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "DevOps Management",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "CI / CD",
+          "level": 9,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "ArgoCD",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Azure DevOps",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2025
+        },
+        {
+          "name": "Docker",
+          "level": 9,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Kubernetes (K8s)",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Containerization",
+          "level": 9,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Vault",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Keycloak",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        },
+        {
+          "name": "Automation Pipelines",
+          "level": 6,
+          "category": "Backend, DevOps & Cloud",
+          "since": 2022
+        }
+      ]
+    },
+    {
+      "category": "Data & Analytics",
+      "skills": [
+        {
+          "name": "Data Architecture",
+          "level": 3,
+          "category": "Data & Analytics",
+          "since": 2025
+        },
+        {
+          "name": "Data Analysis",
+          "level": 3,
+          "category": "Data & Analytics",
+          "since": 2025
+        },
+        {
+          "name": "Analytics",
+          "level": 3,
+          "category": "Data & Analytics",
+          "since": 2025
+        },
+        {
+          "name": "Power BI",
+          "level": 3,
+          "category": "Data & Analytics",
+          "since": 2024
+        }
+      ]
+    },
+    {
+      "category": "Tools & Platforms",
+      "skills": [
+        {
+          "name": "npm",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2015
+        },
+        {
+          "name": "Visual Studio Code",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2016
+        },
+        {
+          "name": "Cursor AI",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2024
+        },
+        {
+          "name": "Google Chrome Developer Tools",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2015
+        },
+        {
+          "name": "Lighthouse",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2020
+        },
+        {
+          "name": "Postman",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2018
+        },
+        {
+          "name": "Gulp.js",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2016
+        },
+        {
+          "name": "Webpack",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2018
+        },
+        {
+          "name": "Yarn",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2020
+        },
+        {
+          "name": "GIT",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2015
+        },
+        {
+          "name": "TFS",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2017
+        },
+        {
+          "name": "Microsoft SharePoint Online",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2024
+        },
+        {
+          "name": "Microsoft Power Automate",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2024
+        },
+        {
+          "name": "Power Apps",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2024
+        },
+        {
+          "name": "Figma",
+          "level": 9,
+          "category": "Tools & Platforms",
+          "since": 2020
+        },
+        {
+          "name": "Adobe XD",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2019
+        },
+        {
+          "name": "Photoshop",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2012
+        },
+        {
+          "name": "Zeplin",
+          "level": 6,
+          "category": "Tools & Platforms",
+          "since": 2020
+        }
+      ]
+    },
+    {
+      "category": "AI & Emerging Technologies",
+      "skills": [
+        {
+          "name": "Generative AI",
+          "level": 9,
+          "category": "AI & Emerging Technologies",
+          "since": 2023
+        },
+        {
+          "name": "AI Prompt Engineering",
+          "level": 9,
+          "category": "AI & Emerging Technologies",
+          "since": 2023
+        },
+        {
+          "name": "Flowise AI",
+          "level": 9,
+          "category": "AI & Emerging Technologies",
+          "since": 2024
+        },
+        {
+          "name": "Ollama",
+          "level": 3,
+          "category": "AI & Emerging Technologies",
+          "since": 2024
+        },
+        {
+          "name": "LangChain",
+          "level": 3,
+          "category": "AI & Emerging Technologies",
+          "since": 2024
+        },
+        {
+          "name": "CrewAI",
+          "level": 3,
+          "category": "AI & Emerging Technologies",
+          "since": 2025
+        },
+        {
+          "name": "Machine Learning Fundamentals",
+          "level": 3,
+          "category": "AI & Emerging Technologies",
+          "since": 2025
+        },
+        {
+          "name": "FastAPI",
+          "level": 3,
+          "category": "AI & Emerging Technologies",
+          "since": 2025
+        }
+      ]
+    },
+    {
+      "category": "Security & Authentication",
+      "skills": [
+        {
+          "name": "Microsoft Authentication Library (MSAL)",
+          "level": 3,
+          "category": "Security & Authentication",
+          "since": 2025
+        }
+      ]
+    },
+    {
+      "category": "Languages",
+      "skills": [
+        {
+          "name": "English",
+          "level": 0,
+          "category": "Languages",
+          "since": 2025
+        },
+        {
+          "name": "Arabic",
+          "level": 0,
+          "category": "Languages",
+          "since": 2025
+        }
+      ]
+    },
+    {
+      "category": "Personal Interests & Wellness",
+      "skills": [
+        {
+          "name": "Hiking",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2020
+        },
+        {
+          "name": "Sports",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2015
+        },
+        {
+          "name": "Padel",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2023
+        },
+        {
+          "name": "Chess and Strategic Games",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2010
+        },
+        {
+          "name": "Reading (Technology, Leadership, Personal Development)",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2015
+        },
+        {
+          "name": "Exploring Emerging Technologies and AI Innovations",
+          "level": 0,
+          "category": "Personal Interests & Wellness",
+          "since": 2023
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+# Local development only. Production uses a managed PostgreSQL instance.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ammam-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: profile
+      POSTGRES_PASSWORD: profile
+      POSTGRES_DB: profile
+    ports:
+      - '5432:5432'
+    volumes:
+      - ammam-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U profile -d profile']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ammam-pgdata:
