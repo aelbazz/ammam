@@ -19,7 +19,6 @@ import {
   UpdateSkillCategoryDto,
   UpdateSkillDto,
 } from './dto/skill.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('skills')
 @ApiBearerAuth()
@@ -27,15 +26,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class SkillController {
   constructor(private readonly service: SkillService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List skill categories with their skills' })
   @ApiResponse({ status: 200, type: [SkillCategoryResponseDto] })
   findAll(): Promise<SkillCategoryResponseDto[]> {
-    return this.service.findAllCategories(false);
+    return this.service.findAllCategories(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one skill category' })
   @ApiResponse({ status: 200, type: SkillCategoryResponseDto })

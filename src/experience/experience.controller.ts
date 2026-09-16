@@ -21,7 +21,6 @@ import {
   UpdateExperienceDto,
 } from './dto/experience.dto';
 import { AttachTechnologyDto } from '../technology/dto/technology.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('experiences')
 @ApiBearerAuth()
@@ -29,15 +28,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class ExperienceController {
   constructor(private readonly service: ExperienceService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List experiences (published only for anonymous callers)' })
   @ApiResponse({ status: 200, type: [ExperienceResponseDto] })
   findAll(): Promise<ExperienceResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one experience with its responsibilities and technologies' })
   @ApiResponse({ status: 200, type: ExperienceResponseDto })

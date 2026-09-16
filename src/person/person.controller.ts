@@ -2,14 +2,13 @@ import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PersonService } from './person.service';
 import { PersonResponseDto, UpdatePersonDto } from './dto/person.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('person')
+@ApiBearerAuth()
 @Controller('person')
 export class PersonController {
   constructor(private readonly service: PersonService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'Get the profile owner' })
   @ApiResponse({ status: 200, type: PersonResponseDto })
@@ -19,7 +18,6 @@ export class PersonController {
   }
 
   @Patch()
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update the profile owner',
     description: 'Person is a singleton, so there is no id in the path and no create/delete.',

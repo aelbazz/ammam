@@ -43,7 +43,12 @@ export class PublicController {
 
     // Set explicitly rather than with @Header(): injecting @Res() hands the response to
     // this method, and Nest skips its own header decorators when it is not managing it.
-    response.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    //
+    // no-cache means "store it, but revalidate before reuse" - NOT "do not cache". With a
+    // strong ETag that revalidation costs a 304 with an empty body, so repeat loads stay
+    // cheap while an admin edit shows up immediately. A max-age here would leave the public
+    // site serving stale content for the length of the window after every edit.
+    response.setHeader('Cache-Control', 'public, no-cache');
     response.setHeader('ETag', etag);
     response.setHeader('Last-Modified', new Date(lastModifiedSeconds).toUTCString());
 

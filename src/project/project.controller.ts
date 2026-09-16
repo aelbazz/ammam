@@ -19,7 +19,6 @@ import {
 } from './dto/project.dto';
 import { CreateChildItemDto, ReorderDto } from '../experience/dto/experience.dto';
 import { AttachTechnologyDto } from '../technology/dto/technology.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('projects')
 @ApiBearerAuth()
@@ -27,15 +26,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class ProjectController {
   constructor(private readonly service: ProjectService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List projects (published only for anonymous callers)' })
   @ApiResponse({ status: 200, type: [ProjectResponseDto] })
   findAll(): Promise<ProjectResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one project with highlights and technologies' })
   @ApiResponse({ status: 200, type: ProjectResponseDto })

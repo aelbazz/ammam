@@ -17,7 +17,6 @@ import {
   UpdateTimelineEventDto,
 } from './dto/timeline-event.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('timeline-events')
 @ApiBearerAuth()
@@ -25,15 +24,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class TimelineEventController {
   constructor(private readonly service: TimelineEventService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List timeline events in display order' })
   @ApiResponse({ status: 200, type: [TimelineEventResponseDto] })
   findAll(): Promise<TimelineEventResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one timeline event' })
   @ApiResponse({ status: 200, type: TimelineEventResponseDto })

@@ -179,7 +179,9 @@ describe('Profile API (e2e)', () => {
 
       expect(first.headers.etag).toBeDefined();
       expect(first.headers['last-modified']).toBeDefined();
-      expect(first.headers['cache-control']).toContain('max-age');
+      // no-cache, not max-age: the payload must revalidate so an admin edit is visible
+      // immediately, with the ETag keeping that revalidation cheap.
+      expect(first.headers['cache-control']).toContain('no-cache');
 
       await request(app.getHttpServer())
         .get('/api/v1/public/profile')
@@ -206,6 +208,32 @@ describe('Profile API (e2e)', () => {
         const { body } = await request(app.getHttpServer()).get('/api/v1/public/profile');
         const ids = body.experiences.map((e: { id: string }) => e.id);
         expect(ids).not.toContain(experience.legacyId);
+      } finally {
+        await prisma.experience.update({
+          where: { id: experience.id },
+          data: { isPublished: true },
+        });
+      }
+    });
+
+    it('still lists unpublished rows for the admin, so they can be restored', async () => {
+      const experience = await prisma.experience.findFirst({ orderBy: { sortOrder: 'desc' } });
+      if (!experience) throw new Error('Seed the database before running e2e tests');
+
+      await prisma.experience.update({
+        where: { id: experience.id },
+        data: { isPublished: false },
+      });
+
+      try {
+        const { body } = await request(app.getHttpServer())
+          .get('/api/v1/experiences')
+          .set(auth())
+          .expect(200);
+
+        const row = body.find((e: { id: string }) => e.id === experience.id);
+        expect(row).toBeDefined();
+        expect(row.isPublished).toBe(false);
       } finally {
         await prisma.experience.update({
           where: { id: experience.id },
@@ -241,6 +269,20 @@ describe('Profile API (e2e)', () => {
         [method](path)
         .send({})
         .expect(401);
+    });
+
+    it('rejects anonymous reads of admin collections', async () => {
+      // The public site reads /public/profile only; these exist for the admin.
+      for (const path of [
+        '/api/v1/experiences',
+        '/api/v1/projects',
+        '/api/v1/technologies',
+        '/api/v1/person',
+        '/api/v1/contact',
+        '/api/v1/skill-categories',
+      ]) {
+        await request(app.getHttpServer()).get(path).expect(401);
+      }
     });
 
     it('does not mutate data when the token is missing', async () => {
@@ -355,7 +397,10 @@ describe('Profile API (e2e)', () => {
     });
 
     it('returns 404 for an unknown id', () =>
-      request(app.getHttpServer()).get('/api/v1/experiences/does-not-exist').expect(404));
+      request(app.getHttpServer())
+        .get('/api/v1/experiences/does-not-exist')
+        .set(auth())
+        .expect(404));
 
     it('deletes the experience and cascades to its children', async () => {
       await request(app.getHttpServer())
@@ -375,7 +420,10 @@ describe('Profile API (e2e)', () => {
 
   describe('Technology CRUD', () => {
     it('lists technologies with usage counts', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/technologies').expect(200);
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/technologies')
+        .set(auth())
+        .expect(200);
       expect(res.body.length).toBeGreaterThan(0);
       expect(res.body[0]).toHaveProperty('experienceCount');
     });
@@ -410,12 +458,13 @@ describe('Profile API (e2e)', () => {
 
   describe('Person and contact singletons', () => {
     it('reads the person', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/person').expect(200);
+      const res = await request(app.getHttpServer()).get('/api/v1/person').set(auth()).expect(200);
       expect(res.body.name).toBeTruthy();
     });
 
     it('updates and restores the tagline', async () => {
-      const before = (await request(app.getHttpServer()).get('/api/v1/person')).body.tagline;
+      const before = (await request(app.getHttpServer()).get('/api/v1/person').set(auth())).body
+        .tagline;
 
       await request(app.getHttpServer())
         .patch('/api/v1/person')
@@ -423,7 +472,8 @@ describe('Profile API (e2e)', () => {
         .send({ tagline: 'Temporarily changed by e2e' })
         .expect(200);
 
-      const changed = (await request(app.getHttpServer()).get('/api/v1/person')).body.tagline;
+      const changed = (await request(app.getHttpServer()).get('/api/v1/person').set(auth())).body
+        .tagline;
       expect(changed).toBe('Temporarily changed by e2e');
 
       await request(app.getHttpServer())
@@ -434,7 +484,7 @@ describe('Profile API (e2e)', () => {
     });
 
     it('reads the contact with its social links', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/contact').expect(200);
+      const res = await request(app.getHttpServer()).get('/api/v1/contact').set(auth()).expect(200);
       expect(Array.isArray(res.body.socialLinks)).toBe(true);
     });
   });

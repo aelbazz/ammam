@@ -16,14 +16,13 @@ import {
   TechnologyResponseDto,
   UpdateTechnologyDto,
 } from './dto/technology.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('technologies')
+@ApiBearerAuth()
 @Controller('technologies')
 export class TechnologyController {
   constructor(private readonly service: TechnologyService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List all technologies with usage counts' })
   @ApiResponse({ status: 200, type: [TechnologyResponseDto] })
@@ -31,7 +30,6 @@ export class TechnologyController {
     return this.service.findAll();
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one technology' })
   @ApiResponse({ status: 200, type: TechnologyResponseDto })
@@ -41,7 +39,6 @@ export class TechnologyController {
   }
 
   @Post()
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a technology',
     description: 'Idempotent: returns the existing technology when the name already resolves.',
@@ -53,7 +50,6 @@ export class TechnologyController {
   }
 
   @Patch(':id')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Rename a technology' })
   @ApiResponse({ status: 200, type: TechnologyResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

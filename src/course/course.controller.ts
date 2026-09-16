@@ -13,7 +13,6 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { CourseService } from './course.service';
 import { CourseResponseDto, CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('courses')
 @ApiBearerAuth()
@@ -21,15 +20,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class CourseController {
   constructor(private readonly service: CourseService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List courses with their topics' })
   @ApiResponse({ status: 200, type: [CourseResponseDto] })
   findAll(): Promise<CourseResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one course' })
   @ApiResponse({ status: 200, type: CourseResponseDto })

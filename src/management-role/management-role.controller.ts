@@ -17,7 +17,6 @@ import {
   UpdateManagementRoleDto,
 } from './dto/management-role.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('management-roles')
 @ApiBearerAuth()
@@ -25,15 +24,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class ManagementRoleController {
   constructor(private readonly service: ManagementRoleService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List management roles' })
   @ApiResponse({ status: 200, type: [ManagementRoleResponseDto] })
   findAll(): Promise<ManagementRoleResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one management role' })
   @ApiResponse({ status: 200, type: ManagementRoleResponseDto })

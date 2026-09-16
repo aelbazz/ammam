@@ -17,7 +17,6 @@ import {
   UpdateAchievementDto,
 } from './dto/achievement.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('achievements')
 @ApiBearerAuth()
@@ -25,15 +24,13 @@ import { Public } from '../common/decorators/public.decorator';
 export class AchievementController {
   constructor(private readonly service: AchievementService) {}
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'List achievements' })
   @ApiResponse({ status: 200, type: [AchievementResponseDto] })
   findAll(): Promise<AchievementResponseDto[]> {
-    return this.service.findAll(false);
+    return this.service.findAll(true);
   }
 
-  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get one achievement' })
   @ApiResponse({ status: 200, type: AchievementResponseDto })
