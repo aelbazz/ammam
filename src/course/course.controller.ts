@@ -14,10 +14,13 @@ import { CourseService } from './course.service';
 import { CourseResponseDto, CreateCourseDto, UpdateCourseDto } from './dto/course.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('courses')
 @ApiBearerAuth()
-@Controller('courses')
+@Roles(Role.CLIENT)
+@Controller('tenant/courses')
 export class CourseController {
   constructor(private readonly service: CourseService) {}
 
@@ -25,7 +28,7 @@ export class CourseController {
   @ApiOperation({ summary: 'List courses with their topics' })
   @ApiResponse({ status: 200, type: [CourseResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<CourseResponseDto[]> {
-    return this.service.findAll(user.personId);
+    return this.service.findAll(user.personId!);
   }
 
   @Get(':id')
@@ -36,7 +39,7 @@ export class CourseController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<CourseResponseDto> {
-    return this.service.findOne(user.personId, id);
+    return this.service.findOne(user.personId!, id);
   }
 
   @Post()
@@ -47,7 +50,7 @@ export class CourseController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateCourseDto,
   ): Promise<CourseResponseDto> {
-    return this.service.create(user.personId, dto);
+    return this.service.create(user.personId!, dto);
   }
 
   @Patch('reorder')
@@ -55,7 +58,7 @@ export class CourseController {
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
   reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(user.personId, dto);
+    return this.service.reorder(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -66,7 +69,7 @@ export class CourseController {
     @Param('id') id: string,
     @Body() dto: UpdateCourseDto,
   ): Promise<CourseResponseDto> {
-    return this.service.update(user.personId, id, dto);
+    return this.service.update(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -74,6 +77,6 @@ export class CourseController {
   @ApiOperation({ summary: 'Delete a course and its topics' })
   @ApiResponse({ status: 204, description: 'Deleted' })
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.remove(user.personId, id);
+    return this.service.remove(user.personId!, id);
   }
 }

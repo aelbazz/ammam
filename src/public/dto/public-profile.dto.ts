@@ -160,7 +160,47 @@ export class PublicSkillDataDto {
   @ApiProperty({ type: [PublicSkillCategoryDto] }) categories!: PublicSkillCategoryDto[];
 }
 
+export class PublicTenantDto {
+  @ApiProperty({ description: 'Public, human-readable identifier - the one used in URLs' })
+  slug!: string;
+  @ApiProperty() name!: string;
+}
+
+export class PublicThemeDto {
+  @ApiProperty() primaryColor!: string;
+  @ApiProperty() secondaryColor!: string;
+  @ApiProperty() accentColor!: string;
+  @ApiProperty() backgroundColor!: string;
+  @ApiProperty() textColor!: string;
+  @ApiProperty() headingColor!: string;
+  @ApiProperty() fontFamily!: string;
+  @ApiProperty() borderRadius!: string;
+  @ApiProperty() layout!: string;
+  @ApiProperty() darkMode!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Optional tenant-authored CSS. The frontend must render this inside a scoped <style> ' +
+      'tag rather than evaluate it, so it can change appearance but cannot execute script.',
+  })
+  customCss?: string | null;
+}
+
+export class PublicWebsiteSettingsDto {
+  @ApiProperty() websiteTitle!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) description?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) faviconUrl?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) logoUrl?: string | null;
+  @ApiProperty({ type: [String] }) visibleSections!: string[];
+  @ApiProperty({ type: [String] }) sectionOrder!: string[];
+  @ApiPropertyOptional({ type: String, nullable: true }) seoTitle?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) seoDescription?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) ogImageUrl?: string | null;
+}
+
 export class PublicProfileDto {
+  @ApiProperty({ type: PublicTenantDto }) tenant!: PublicTenantDto;
   @ApiProperty({ type: PublicPersonDto }) person!: PublicPersonDto;
   @ApiProperty({ type: PublicContactDto, nullable: true }) contact!: PublicContactDto | null;
   @ApiProperty({ type: [PublicExperienceDto] }) experiences!: PublicExperienceDto[];
@@ -170,4 +210,6 @@ export class PublicProfileDto {
   @ApiProperty({ type: [PublicTimelineEventDto] }) timelineEvents!: PublicTimelineEventDto[];
   @ApiProperty({ type: [PublicManagementRoleDto] }) managementRoles!: PublicManagementRoleDto[];
   @ApiProperty({ type: PublicSkillDataDto }) skills!: PublicSkillDataDto;
+  @ApiProperty({ type: PublicThemeDto }) theme!: PublicThemeDto;
+  @ApiProperty({ type: PublicWebsiteSettingsDto }) settings!: PublicWebsiteSettingsDto;
 }

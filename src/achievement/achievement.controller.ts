@@ -18,10 +18,13 @@ import {
 } from './dto/achievement.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('achievements')
 @ApiBearerAuth()
-@Controller('achievements')
+@Roles(Role.CLIENT)
+@Controller('tenant/achievements')
 export class AchievementController {
   constructor(private readonly service: AchievementService) {}
 
@@ -29,7 +32,7 @@ export class AchievementController {
   @ApiOperation({ summary: 'List achievements' })
   @ApiResponse({ status: 200, type: [AchievementResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<AchievementResponseDto[]> {
-    return this.service.findAll(user.personId);
+    return this.service.findAll(user.personId!);
   }
 
   @Get(':id')
@@ -40,7 +43,7 @@ export class AchievementController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<AchievementResponseDto> {
-    return this.service.findOne(user.personId, id);
+    return this.service.findOne(user.personId!, id);
   }
 
   @Post()
@@ -51,7 +54,7 @@ export class AchievementController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateAchievementDto,
   ): Promise<AchievementResponseDto> {
-    return this.service.create(user.personId, dto);
+    return this.service.create(user.personId!, dto);
   }
 
   @Patch('reorder')
@@ -59,7 +62,7 @@ export class AchievementController {
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
   reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(user.personId, dto);
+    return this.service.reorder(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -70,7 +73,7 @@ export class AchievementController {
     @Param('id') id: string,
     @Body() dto: UpdateAchievementDto,
   ): Promise<AchievementResponseDto> {
-    return this.service.update(user.personId, id, dto);
+    return this.service.update(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -78,6 +81,6 @@ export class AchievementController {
   @ApiOperation({ summary: 'Delete an achievement' })
   @ApiResponse({ status: 204, description: 'Deleted' })
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.remove(user.personId, id);
+    return this.service.remove(user.personId!, id);
   }
 }

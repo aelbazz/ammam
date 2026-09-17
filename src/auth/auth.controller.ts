@@ -13,14 +13,15 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  // Overrides the global budget for this route only. Login is the one endpoint worth
-  // brute-forcing, so it gets a far smaller allowance than the rest of the API.
-  @Throttle({
-    default: { limit: Number(process.env.AUTH_THROTTLE_LIMIT ?? 5), ttl: 60_000 },
-  })
+  // Far stricter than the global budget: login is the one endpoint worth brute-forcing.
+  // Overrides the 'default' throttler for this route only - see app.module.ts.
+  @Throttle({ default: { limit: Number(process.env.AUTH_THROTTLE_LIMIT ?? 5), ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate an administrator and receive a JWT' })
+  @ApiOperation({
+    summary: 'Authenticate and receive a JWT',
+    description: 'One endpoint for every role - ADMIN, COORDINATOR and CLIENT all sign in here.',
+  })
   @ApiResponse({ status: 200, type: LoginResponseDto })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 429, description: 'Too many login attempts' })
@@ -30,10 +31,19 @@ export class AuthController {
 
   @Get('me')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Return the currently authenticated administrator' })
+  @ApiOperation({
+    summary: 'Return the currently authenticated user, including their role and tenant',
+  })
   @ApiResponse({ status: 200, type: AuthUserDto })
   @ApiResponse({ status: 401, description: 'Missing or invalid token' })
   me(@CurrentUser() user: AuthenticatedUser): AuthUserDto {
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenantId,
+      tenantSlug: user.tenantSlug,
+    };
   }
 }

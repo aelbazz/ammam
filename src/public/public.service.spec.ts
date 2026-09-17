@@ -1,243 +1,206 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { TenantStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantAccessService } from '../tenant-access/tenant-access.service';
 import { PublicProfileService } from './public.service';
 
 /**
  * These tests pin the response *contract* the Angular frontend depends on: child
- * collections must arrive as string arrays in sortOrder, and no database metadata may
- * appear anywhere in the payload.
+ * collections must arrive as string arrays in sortOrder, no database metadata may appear
+ * anywhere in the payload, and access is gated by TenantAccessService - not by the caller.
  */
 describe('PublicProfileService', () => {
   let service: PublicProfileService;
-  let prisma: { person: { findUnique: jest.Mock } };
+  let prisma: { tenant: { findUnique: jest.Mock }; tenantSlugHistory: { findUnique: jest.Mock } };
 
-  const personRow = {
-    id: 'db-id-should-not-leak',
-    slug: 'default',
+  const tenantRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
+    id: 'tenant-db-id-should-not-leak',
+    slug: 'ahmed',
     name: 'Ahmed Mohsen Albaz',
-    title: 'Staff Engineer',
-    summary: 'Summary',
-    location: 'Riyadh, Saudi Arabia',
-    yearsOfExperience: 13,
-    avatar: '/assets/images/profile-image.jpg',
-    tagline: 'Tagline',
-    linkedin: 'https://www.linkedin.com/in/elbazz',
-    birthday: 'June 26',
+    status: TenantStatus.ACTIVE,
+    createdById: null,
+    coordinatorId: null,
     createdAt: new Date('2020-01-01'),
     updatedAt: new Date('2020-01-01'),
-    contact: {
-      id: 'c1',
-      personId: 'db-id-should-not-leak',
-      email: 'a@b.com',
-      phone: '+1',
-      whatsapp: '+1',
-      linkedin: 'https://x.com',
-      location: 'Riyadh',
+    subscription: { status: 'ACTIVE' },
+    theme: null,
+    settings: null,
+    person: {
+      id: 'person-db-id-should-not-leak',
+      name: 'Ahmed Mohsen Albaz',
+      title: 'Staff Engineer',
+      summary: 'Summary',
+      location: 'Riyadh, Saudi Arabia',
+      yearsOfExperience: 13,
+      avatar: '/assets/images/profile-image.jpg',
+      tagline: 'Tagline',
+      linkedin: 'https://www.linkedin.com/in/elbazz',
       birthday: 'June 26',
-      muchskills: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      socialLinks: [
+      contact: {
+        id: 'c1',
+        email: 'a@b.com',
+        phone: '+1',
+        whatsapp: '+1',
+        linkedin: 'https://x.com',
+        location: 'Riyadh',
+        birthday: 'June 26',
+        muchskills: null,
+        socialLinks: [
+          { platform: 'LinkedIn', url: 'https://l', icon: 'bi-linkedin' },
+          { platform: 'GitHub', url: 'https://g', icon: 'bi-github' },
+        ],
+      },
+      experiences: [
         {
-          id: 's1',
-          contactId: 'c1',
-          platform: 'LinkedIn',
-          url: 'https://l',
-          icon: 'bi-linkedin',
-          sortOrder: 0,
+          legacyId: 'exp1',
+          company: 'THIQAH',
+          companyFullName: null,
+          companyLogo: null,
+          companyWebsite: null,
+          companyDescription: null,
+          position: 'Staff Developer',
+          location: 'Riyadh',
+          startDate: 'Jan 2024',
+          endDate: null,
+          isCurrent: true,
+          description: 'desc',
+          responsibilities: [{ description: 'First' }, { description: 'Second' }],
+          achievements: [{ description: 'Won something' }],
+          technologies: [
+            { technology: { name: 'Angular' } },
+            { technology: { name: 'TypeScript' } },
+          ],
         },
+      ],
+      projects: [
         {
-          id: 's2',
-          contactId: 'c1',
-          platform: 'GitHub',
-          url: 'https://g',
-          icon: 'bi-github',
-          sortOrder: 1,
+          legacyId: 'proj1',
+          name: 'iHealth',
+          description: 'd',
+          role: 'Staff',
+          startDate: '2024',
+          endDate: null,
+          type: 'Strategic',
+          company: 'THIQAH',
+          isCurrent: true,
+          isStrategicInitiative: true,
+          imageUrl: null,
+          githubUrl: null,
+          liveUrl: null,
+          highlights: [{ description: 'H1' }, { description: 'H2' }],
+          technologies: [{ technology: { name: 'Angular' } }],
+        },
+      ],
+      achievements: [
+        {
+          legacyId: 'ach1',
+          title: 'T',
+          description: 'D',
+          date: '2025',
+          category: 'award',
+          organization: 'Org',
+          icon: 'bi-trophy',
+          articleUrl: null,
+        },
+      ],
+      courses: [
+        {
+          legacyId: 'edu1',
+          title: 'C',
+          provider: 'P',
+          completionDate: '2016',
+          level: 'Diploma',
+          description: null,
+          duration: null,
+          instructor: null,
+          courseUrl: null,
+          certificateUrl: null,
+          startDate: null,
+          grade: null,
+          skills: [{ name: 'Programming' }, { name: 'Web' }],
+        },
+      ],
+      timelineEvents: [
+        {
+          legacyId: 'evt1',
+          date: 'Feb 2025',
+          title: 'T',
+          subtitle: 'S',
+          description: 'D',
+          type: 'achievement',
+          icon: null,
+        },
+      ],
+      managementRoles: [
+        {
+          legacyId: 'mgmt1',
+          level: 'medium',
+          title: 'Lead',
+          organization: 'Org',
+          startDate: 'Jan 2024',
+          endDate: null,
+          isCurrent: true,
+          description: 'D',
+          teamSize: null,
+          keyResponsibilities: [{ description: 'R1' }],
+          achievements: [{ description: 'A1' }],
+        },
+      ],
+      skillCategories: [
+        {
+          name: 'Frontend Technologies',
+          skills: [
+            {
+              name: 'Angular',
+              level: 9,
+              since: 2015,
+              icon: null,
+              yearsOfExperience: null,
+              endorsements: null,
+            },
+            {
+              name: 'Leadership',
+              level: 0,
+              since: 2017,
+              icon: null,
+              yearsOfExperience: null,
+              endorsements: null,
+            },
+          ],
         },
       ],
     },
-    experiences: [
-      {
-        id: 'e1',
-        legacyId: 'exp1',
-        personId: 'p',
-        company: 'THIQAH',
-        companyFullName: null,
-        companyLogo: null,
-        companyWebsite: null,
-        companyDescription: null,
-        position: 'Staff Developer',
-        location: 'Riyadh',
-        startDate: 'Jan 2024',
-        endDate: null,
-        isCurrent: true,
-        description: 'desc',
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        responsibilities: [{ description: 'First' }, { description: 'Second' }],
-        achievements: [{ description: 'Won something' }],
-        technologies: [{ technology: { name: 'Angular' } }, { technology: { name: 'TypeScript' } }],
-      },
-    ],
-    projects: [
-      {
-        id: 'pr1',
-        legacyId: 'proj1',
-        personId: 'p',
-        name: 'iHealth',
-        description: 'd',
-        role: 'Staff',
-        startDate: '2024',
-        endDate: null,
-        type: 'Strategic',
-        company: 'THIQAH',
-        isCurrent: true,
-        isStrategicInitiative: true,
-        imageUrl: null,
-        githubUrl: null,
-        liveUrl: null,
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        highlights: [{ description: 'H1' }, { description: 'H2' }],
-        technologies: [{ technology: { name: 'Angular' } }],
-      },
-    ],
-    achievements: [
-      {
-        id: 'a1',
-        legacyId: 'ach1',
-        personId: 'p',
-        title: 'T',
-        description: 'D',
-        date: '2025',
-        category: 'award',
-        organization: 'Org',
-        icon: 'bi-trophy',
-        articleUrl: null,
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-    courses: [
-      {
-        id: 'co1',
-        legacyId: 'edu1',
-        personId: 'p',
-        title: 'C',
-        provider: 'P',
-        completionDate: '2016',
-        level: 'Diploma',
-        description: null,
-        duration: null,
-        instructor: null,
-        courseUrl: null,
-        certificateUrl: null,
-        startDate: null,
-        grade: null,
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        skills: [{ name: 'Programming' }, { name: 'Web' }],
-      },
-    ],
-    timelineEvents: [
-      {
-        id: 't1',
-        legacyId: 'evt1',
-        personId: 'p',
-        date: 'Feb 2025',
-        title: 'T',
-        subtitle: 'S',
-        description: 'D',
-        type: 'achievement',
-        icon: null,
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-    managementRoles: [
-      {
-        id: 'm1',
-        legacyId: 'mgmt1',
-        personId: 'p',
-        level: 'medium',
-        title: 'Lead',
-        organization: 'Org',
-        startDate: 'Jan 2024',
-        endDate: null,
-        isCurrent: true,
-        description: 'D',
-        teamSize: null,
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        keyResponsibilities: [{ description: 'R1' }],
-        achievements: [{ description: 'A1' }],
-      },
-    ],
-    skillCategories: [
-      {
-        id: 'sc1',
-        personId: 'p',
-        name: 'Frontend Technologies',
-        sortOrder: 0,
-        isPublished: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        skills: [
-          {
-            id: 'sk1',
-            categoryId: 'sc1',
-            name: 'Angular',
-            level: 9,
-            since: 2015,
-            icon: null,
-            yearsOfExperience: null,
-            endorsements: null,
-            sortOrder: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: 'sk2',
-            categoryId: 'sc1',
-            name: 'Leadership',
-            level: 0,
-            since: 2017,
-            icon: null,
-            yearsOfExperience: null,
-            endorsements: null,
-            sortOrder: 1,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-      },
-    ],
-  };
+    ...overrides,
+  });
 
   beforeEach(async () => {
-    prisma = { person: { findUnique: jest.fn().mockResolvedValue(personRow) } };
+    prisma = {
+      tenant: { findUnique: jest.fn() },
+      tenantSlugHistory: { findUnique: jest.fn() },
+    };
     const moduleRef = await Test.createTestingModule({
-      providers: [PublicProfileService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        PublicProfileService,
+        TenantAccessService,
+        { provide: PrismaService, useValue: prisma },
+      ],
     }).compile();
     service = moduleRef.get(PublicProfileService);
   });
 
-  it('returns every top-level section', async () => {
-    const result = await service.getPublicProfile();
-    expect(Object.keys(result)).toEqual([
+  /** tenant.findUnique is called twice: once to resolve slug -> id, once to load the full
+   *  graph. Both calls hit the same mock in these tests, so it always returns the full row. */
+  function mockTenant(row: ReturnType<typeof tenantRow> | null) {
+    prisma.tenant.findUnique.mockResolvedValue(row);
+  }
+
+  it('resolves a live slug and returns every top-level section', async () => {
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(Object.keys(profile)).toEqual([
+      'tenant',
       'person',
       'contact',
       'experiences',
@@ -247,92 +210,124 @@ describe('PublicProfileService', () => {
       'timelineEvents',
       'managementRoles',
       'skills',
+      'theme',
+      'settings',
     ]);
   });
 
+  it('exposes only the public tenant slug and name, never the internal id', async () => {
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(profile.tenant).toEqual({ slug: 'ahmed', name: 'Ahmed Mohsen Albaz' });
+  });
+
+  it('is case-insensitive: an uppercase slug resolves the same lower-cased tenant', async () => {
+    mockTenant(tenantRow());
+    await service.resolveBySlug('AHMED');
+
+    expect(prisma.tenant.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { slug: 'ahmed' } }),
+    );
+  });
+
   it('exposes the frontend legacy id as `id`, not the database id', async () => {
-    const result = await service.getPublicProfile();
-    expect(result.experiences[0].id).toBe('exp1');
-    expect(result.projects[0].id).toBe('proj1');
-    expect(result.achievements[0].id).toBe('ach1');
-    expect(result.timelineEvents[0].id).toBe('evt1');
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(profile.experiences[0].id).toBe('exp1');
+    expect(profile.projects[0].id).toBe('proj1');
   });
 
-  it('flattens responsibilities and highlights to string arrays', async () => {
-    const result = await service.getPublicProfile();
-    expect(result.experiences[0].responsibilities).toEqual(['First', 'Second']);
-    expect(result.experiences[0].achievements).toEqual(['Won something']);
-    expect(result.projects[0].highlights).toEqual(['H1', 'H2']);
-    expect(result.courses[0].skills).toEqual(['Programming', 'Web']);
-    expect(result.managementRoles[0].keyResponsibilities).toEqual(['R1']);
+  it('flattens responsibilities, highlights and technologies to plain arrays', async () => {
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(profile.experiences[0].responsibilities).toEqual(['First', 'Second']);
+    expect(profile.experiences[0].technologies).toEqual(['Angular', 'TypeScript']);
+    expect(profile.projects[0].highlights).toEqual(['H1', 'H2']);
   });
 
-  it('flattens technologies to plain names', async () => {
-    const result = await service.getPublicProfile();
-    expect(result.experiences[0].technologies).toEqual(['Angular', 'TypeScript']);
-    expect(result.projects[0].technologies).toEqual(['Angular']);
-  });
+  it('preserves skill level 0 and the "medium" management level the frontend interface omits', async () => {
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
 
-  it('shapes skills as { categories: [...] } to match the frontend SkillData interface', async () => {
-    const result = await service.getPublicProfile();
-    expect(result.skills.categories).toHaveLength(1);
-    expect(result.skills.categories[0].category).toBe('Frontend Technologies');
-    // category is denormalised onto each skill, as the frontend Skill model expects.
-    expect(result.skills.categories[0].skills[0].category).toBe('Frontend Technologies');
-  });
-
-  it('preserves skill level 0 rather than coercing it', async () => {
-    const result = await service.getPublicProfile();
-    const leadership = result.skills.categories[0].skills.find((s) => s.name === 'Leadership');
+    const leadership = profile.skills.categories[0].skills.find((s) => s.name === 'Leadership');
     expect(leadership?.level).toBe(0);
-  });
-
-  it('preserves the management level "medium" that the frontend interface omits', async () => {
-    const result = await service.getPublicProfile();
-    expect(result.managementRoles[0].level).toBe('medium');
+    expect(profile.managementRoles[0].level).toBe('medium');
   });
 
   it('leaks no database metadata anywhere in the payload', async () => {
-    const serialised = JSON.stringify(await service.getPublicProfile());
-    expect(serialised).not.toContain('db-id-should-not-leak');
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
+    const serialised = JSON.stringify(profile);
+
+    expect(serialised).not.toContain('tenant-db-id-should-not-leak');
+    expect(serialised).not.toContain('person-db-id-should-not-leak');
     expect(serialised).not.toContain('isPublished');
-    expect(serialised).not.toContain('sortOrder');
     expect(serialised).not.toContain('personId');
     expect(serialised).not.toContain('createdAt');
-    expect(serialised).not.toContain('updatedAt');
-    expect(serialised).not.toContain('legacyId');
   });
 
-  it('requests published rows only, ordered by sortOrder', async () => {
-    await service.getPublicProfile();
-    const include = prisma.person.findUnique.mock.calls[0][0].include;
+  it('throws NotFound for an unregistered and unretired slug', async () => {
+    mockTenant(null);
+    prisma.tenantSlugHistory.findUnique.mockResolvedValue(null);
 
-    for (const key of [
-      'experiences',
-      'projects',
-      'achievements',
-      'courses',
-      'timelineEvents',
-      'managementRoles',
-      'skillCategories',
-    ]) {
-      expect(include[key].where).toEqual({ isPublished: true });
-      expect(include[key].orderBy).toEqual({ sortOrder: 'asc' });
-    }
+    await expect(service.resolveBySlug('nobody')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('loads the whole profile in a single Prisma query', async () => {
-    await service.getPublicProfile();
-    expect(prisma.person.findUnique).toHaveBeenCalledTimes(1);
+  it('follows a retired slug via history and reports the redirect', async () => {
+    prisma.tenant.findUnique
+      .mockResolvedValueOnce(null) // live lookup by the old slug misses
+      .mockResolvedValue(tenantRow()); // subsequent lookups by id succeed
+    prisma.tenantSlugHistory.findUnique.mockResolvedValue({
+      tenantId: 'tenant-db-id-should-not-leak',
+    });
+
+    const result = await service.resolveBySlug('old-slug');
+
+    expect(result.redirectedFromSlug).toBe('old-slug');
+    expect(result.profile.tenant.slug).toBe('ahmed');
   });
 
-  it('throws NotFound when the profile has not been seeded', async () => {
-    prisma.person.findUnique.mockResolvedValue(null);
-    await expect(service.getPublicProfile()).rejects.toBeInstanceOf(NotFoundException);
+  it('does not consult history when the slug is live', async () => {
+    mockTenant(tenantRow());
+    await service.resolveBySlug('ahmed');
+
+    expect(prisma.tenantSlugHistory.findUnique).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['PENDING tenant', tenantRow({ status: TenantStatus.PENDING })],
+    ['SUSPENDED tenant', tenantRow({ status: TenantStatus.SUSPENDED })],
+    ['ARCHIVED tenant', tenantRow({ status: TenantStatus.ARCHIVED })],
+    ['EXPIRED subscription', tenantRow({ subscription: { status: 'EXPIRED' } })],
+    ['SUSPENDED subscription', tenantRow({ subscription: { status: 'SUSPENDED' } })],
+    ['no subscription at all', tenantRow({ subscription: null })],
+  ])('hides the profile for %s behind the same 404 as an unknown slug', async (_label, row) => {
+    mockTenant(row);
+    await expect(service.resolveBySlug('ahmed')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('still serves a TRIAL or PAST_DUE tenant (grace period)', async () => {
+    mockTenant(tenantRow({ subscription: { status: 'TRIAL' } }));
+    await expect(service.resolveBySlug('ahmed')).resolves.toBeDefined();
+
+    mockTenant(tenantRow({ subscription: { status: 'PAST_DUE' } }));
+    await expect(service.resolveBySlug('ahmed')).resolves.toBeDefined();
+  });
+
+  it('falls back to theme/settings defaults when a tenant has not customised them', async () => {
+    mockTenant(tenantRow({ theme: null, settings: null }));
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(profile.theme.primaryColor).toBe('#6366f1');
+    expect(profile.settings.websiteTitle).toBe('Ahmed Mohsen Albaz'); // falls back to tenant.name
   });
 
   it('produces a stable ETag that changes with the content', async () => {
-    const profile = await service.getPublicProfile();
+    mockTenant(tenantRow());
+    const { profile } = await service.resolveBySlug('ahmed');
     const etag = service.computeETag(profile);
 
     expect(etag).toMatch(/^"[A-Za-z0-9_-]{32}"$/);

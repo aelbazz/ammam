@@ -10,11 +10,15 @@ import { JwtPayload } from './strategies/jwt.strategy';
 /**
  * Argon2id hash of the string "invalid". Verified against when the email does not exist so
  * a wrong email and a wrong password take the same amount of time - without this, response
- * timing reveals which admin emails are real.
+ * timing reveals which emails are real accounts on the platform.
  */
 const DUMMY_HASH =
   '$argon2id$v=19$m=65536,t=3,p=4$c29tZS1zdGF0aWMtc2FsdA$1B0m1sFBVQ3m3vJ0CkCiT4X0tLmUZk5Z1r5lQkRZ0nE';
 
+/**
+ * One login endpoint for all three roles (ADMIN, COORDINATOR, CLIENT) - the response tells
+ * the caller which one they got. See docs/SAAS-ARCHITECTURE.md "Authentication".
+ */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -26,14 +30,14 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {
-    const user = await this.prisma.adminUser.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase().trim() },
-      include: { person: { select: { slug: true } } },
+      include: { tenant: { select: { slug: true } } },
     });
 
     const passwordMatches = await this.verify(user?.passwordHash ?? DUMMY_HASH, dto.password);
 
-    if (!user || !user.isActive || !passwordMatches) {
+    if (!user || user.status !== 'active' || !passwordMatches) {
       // Deliberately identical for every failure mode - never reveal which part was wrong.
       // The attempted email is not logged: failed logins are where people paste passwords
       // into the email field by mistake.
@@ -41,12 +45,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    await this.prisma.adminUser.update({
+    await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    const payload: JwtPayload = { sub: user.id, email: user.email };
+    const payload: JwtPayload = { sub: user.id };
     const expiresIn = this.config.get<string>('JWT_EXPIRES_IN', '7d');
 
     return {
@@ -56,8 +60,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        personId: user.personId,
-        personSlug: user.person.slug,
+        role: user.role,
+        tenantId: user.tenantId,
+        tenantSlug: user.tenant?.slug ?? null,
       },
     };
   }

@@ -17,10 +17,13 @@ import {
   UpdateTechnologyDto,
 } from './dto/technology.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('technologies')
 @ApiBearerAuth()
-@Controller('technologies')
+@Roles(Role.CLIENT)
+@Controller('tenant/technologies')
 export class TechnologyController {
   constructor(private readonly service: TechnologyService) {}
 
@@ -28,7 +31,7 @@ export class TechnologyController {
   @ApiOperation({ summary: 'List all technologies with usage counts' })
   @ApiResponse({ status: 200, type: [TechnologyResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<TechnologyResponseDto[]> {
-    return this.service.findAll(user.personId);
+    return this.service.findAll(user.personId!);
   }
 
   @Get(':id')
@@ -39,7 +42,7 @@ export class TechnologyController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<TechnologyResponseDto> {
-    return this.service.findOne(user.personId, id);
+    return this.service.findOne(user.personId!, id);
   }
 
   @Post()
@@ -53,7 +56,7 @@ export class TechnologyController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateTechnologyDto,
   ): Promise<TechnologyResponseDto> {
-    return this.service.create(user.personId, dto);
+    return this.service.create(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -65,7 +68,7 @@ export class TechnologyController {
     @Param('id') id: string,
     @Body() dto: UpdateTechnologyDto,
   ): Promise<TechnologyResponseDto> {
-    return this.service.update(user.personId, id, dto);
+    return this.service.update(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -78,6 +81,6 @@ export class TechnologyController {
   @ApiResponse({ status: 204, description: 'Deleted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.remove(user.personId, id);
+    return this.service.remove(user.personId!, id);
   }
 }

@@ -20,10 +20,13 @@ import {
 import { CreateChildItemDto, ReorderDto } from '../experience/dto/experience.dto';
 import { AttachTechnologyDto } from '../technology/dto/technology.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('projects')
 @ApiBearerAuth()
-@Controller('projects')
+@Roles(Role.CLIENT)
+@Controller('tenant/projects')
 export class ProjectController {
   constructor(private readonly service: ProjectService) {}
 
@@ -31,7 +34,7 @@ export class ProjectController {
   @ApiOperation({ summary: 'List projects (published only for anonymous callers)' })
   @ApiResponse({ status: 200, type: [ProjectResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<ProjectResponseDto[]> {
-    return this.service.findAll(user.personId);
+    return this.service.findAll(user.personId!);
   }
 
   @Get(':id')
@@ -42,7 +45,7 @@ export class ProjectController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<ProjectResponseDto> {
-    return this.service.findOne(user.personId, id);
+    return this.service.findOne(user.personId!, id);
   }
 
   @Post()
@@ -53,7 +56,7 @@ export class ProjectController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateProjectDto,
   ): Promise<ProjectResponseDto> {
-    return this.service.create(user.personId, dto);
+    return this.service.create(user.personId!, dto);
   }
 
   @Patch('reorder')
@@ -61,7 +64,7 @@ export class ProjectController {
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
   reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(user.personId, dto);
+    return this.service.reorder(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -73,7 +76,7 @@ export class ProjectController {
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,
   ): Promise<ProjectResponseDto> {
-    return this.service.update(user.personId, id, dto);
+    return this.service.update(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -81,7 +84,7 @@ export class ProjectController {
   @ApiOperation({ summary: 'Delete a project and its highlights' })
   @ApiResponse({ status: 204, description: 'Deleted' })
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.remove(user.personId, id);
+    return this.service.remove(user.personId!, id);
   }
 
   @Post(':id/highlights')
@@ -92,7 +95,7 @@ export class ProjectController {
     @Param('id') id: string,
     @Body() dto: CreateChildItemDto,
   ): Promise<ProjectHighlightResponseDto> {
-    return this.service.addHighlight(user.personId, id, dto);
+    return this.service.addHighlight(user.personId!, id, dto);
   }
 
   @Delete('highlights/:highlightId')
@@ -103,7 +106,7 @@ export class ProjectController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('highlightId') highlightId: string,
   ): Promise<void> {
-    return this.service.removeHighlight(user.personId, highlightId);
+    return this.service.removeHighlight(user.personId!, highlightId);
   }
 
   @Post(':id/technologies')
@@ -117,7 +120,7 @@ export class ProjectController {
     @Param('id') id: string,
     @Body() dto: AttachTechnologyDto,
   ): Promise<ProjectResponseDto> {
-    return this.service.attachTechnology(user.personId, id, dto);
+    return this.service.attachTechnology(user.personId!, id, dto);
   }
 
   @Delete(':id/technologies/:technologyId')
@@ -129,6 +132,6 @@ export class ProjectController {
     @Param('id') id: string,
     @Param('technologyId') technologyId: string,
   ): Promise<void> {
-    return this.service.detachTechnology(user.personId, id, technologyId);
+    return this.service.detachTechnology(user.personId!, id, technologyId);
   }
 }

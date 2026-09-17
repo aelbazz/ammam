@@ -18,7 +18,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Runtime connection. On Supabase this is the TRANSACTION pooler (port 6543), which
   // suits short-lived serverless/container connections.
   url       = env("DATABASE_URL")
@@ -30,7 +30,66 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Enums
+// SaaS platform enums
+// ---------------------------------------------------------------------------
+
+/// Platform-wide role. Resolved from User.role on every request during JWT validation -
+/// never trusted from a client-supplied value. See docs/SAAS-ARCHITECTURE.md.
+enum Role {
+  ADMIN
+  COORDINATOR
+  CLIENT
+
+  @@map("role")
+}
+
+enum UserStatus {
+  active
+  suspended
+
+  @@map("user_status")
+}
+
+/// Tenant lifecycle. Transitions are validated by TenantLifecycleService, not by callers
+/// setting the field directly - see that service for the allowed transition graph.
+enum TenantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+
+  @@map("tenant_status")
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+
+  @@map("subscription_status")
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+
+  @@map("billing_interval")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
+}
+
+// ---------------------------------------------------------------------------
+// Existing profile-domain enums
 // ---------------------------------------------------------------------------
 
 /// Values observed in achievements.json: award (3), certification (1), recognition (6).
@@ -69,37 +128,312 @@ enum ManagementLevel {
 }
 
 // ---------------------------------------------------------------------------
-// Person - the central profile entity (singleton for this application)
+// SaaS platform - Tenant, User, RBAC, billing, audit
+//
+// A Tenant is the account. It owns exactly one Person (the existing profile domain,
+// unmodified below) plus its own theme and website settings. Tenant.id is an internal
+// UUID used for every relation; Tenant.slug is the public, human-readable identifier used
+// in URLs and is NEVER used for authorization - see docs/SAAS-ARCHITECTURE.md.
 // ---------------------------------------------------------------------------
 
-/// A Person is a tenant: one profile and everything under it. Every other person-owned
-/// table carries personId, and every admin query is scoped by the caller's tenant, so two
-/// profiles in the same database cannot see or modify each other's rows.
-model Person {
-  id   String @id @default(cuid())
-  /// Public, URL-safe tenant key. Used by GET /public/profile/:slug.
+model Tenant {
+  /// Internal identity. Never derived from or equal to the slug, and never re-used.
+  id String @id @default(uuid())
+
+  /// Public identity. Looked up case-insensitively (stored lower-cased) for the public
+  /// profile route and API. Changing it does not change `id`, and does not affect any
+  /// existing authorization check - every protected query still keys off `id`.
   slug String @unique
+
+  name   String
+  status TenantStatus @default(PENDING)
+
+  /// Platform user who ran the creation - an Admin, or a Coordinator creating on their own
+  /// behalf. Nullable so a data-migration-created tenant (see prisma/seed.ts) is not forced
+  /// to reference a synthetic actor.
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("TenantCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  /// Coordinator currently assigned to this tenant, if any. Nullable and reassignable by an
+  /// Admin. A Coordinator's "assigned tenants" list is exactly the tenants pointing back at
+  /// them here - there is no separate membership table because one tenant needs at most one
+  /// assigned coordinator for this platform's size; see docs/SAAS-ARCHITECTURE.md for the
+  /// trade-off and how to evolve it into a join table without touching callers.
+  coordinatorId String? @map("coordinator_id")
+  coordinator   User?   @relation("TenantCoordinator", fields: [coordinatorId], references: [id], onDelete: SetNull)
+
+  person       Person?
+  theme        TenantTheme?
+  settings     WebsiteSettings?
+  client       User?
+  subscription Subscription?
+  payments     Payment[]
+  slugHistory  TenantSlugHistory[]
+  auditLogs    AuditLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([coordinatorId])
+  @@index([createdById])
+  @@map("tenant")
+}
+
+/// Retired slugs. Consulted by the public lookup when a slug does not match any live
+/// Tenant, so a previously shared profile URL degrades to "moved" info instead of a plain
+/// 404 - see PublicProfileService.resolveTenant. Uniqueness here (not just on the live
+/// Tenant.slug) stops a new tenant from squatting a slug someone else's old links still
+/// point at.
+model TenantSlugHistory {
+  id String @id @default(cuid())
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  slug String @unique
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("tenant_slug_history")
+}
+
+/// Every platform account: the SaaS owner (ADMIN), an operator managing a subset of
+/// tenants (COORDINATOR), or the person who owns one tenant's content (CLIENT).
+///
+/// tenantId is set only for CLIENT and is unique, giving the 1:1 "a client manages exactly
+/// one tenant" relationship the spec calls for. ADMIN and COORDINATOR always have
+/// tenantId = null - a Coordinator's tenants are found via Tenant.coordinatorId, not here.
+model User {
+  id String @id @default(cuid())
+
+  email        String     @unique
+  /// Argon2id hash. Never selected into a response DTO.
+  passwordHash String     @map("password_hash")
+  name         String?
+  role         Role
+  status       UserStatus @default(active)
+
+  tenantId String? @unique @map("tenant_id")
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  coordinatedTenants Tenant[] @relation("TenantCoordinator")
+  createdTenants     Tenant[] @relation("TenantCreatedBy")
+
+  lastLoginAt DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([role])
+  @@index([tenantId])
+  @@map("user")
+}
+
+/// One row per tenant, mutated in place as the plan changes or a period renews. Payment
+/// rows are the historical trail; this row is always "the current state."
+model Subscription {
+  id String @id @default(cuid())
+
+  tenantId String @unique @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  planId String @map("plan_id")
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  status SubscriptionStatus @default(TRIAL)
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  expiresAt   DateTime? @map("expires_at")
+  renewalDate DateTime? @map("renewal_date")
+  autoRenew   Boolean   @default(false) @map("auto_renew")
+
+  payments Payment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([renewalDate])
+  @@map("subscription")
+}
+
+model Plan {
+  id String @id @default(cuid())
+
+  name            String          @unique
+  description     String?
+  /// Smallest-currency-unit-free decimal amount, e.g. 29.00. Never a float.
+  price           Decimal         @db.Decimal(10, 2)
+  currency        String          @default("USD")
+  billingInterval BillingInterval @map("billing_interval")
+  active          Boolean         @default(true)
+  /// Free-form list of feature flags/labels shown on a pricing page. Not machine-enforced -
+  /// see docs/SAAS-ARCHITECTURE.md for why gating logic must not read this field.
+  features        Json            @default("[]")
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plan")
+}
+
+/// Provider-agnostic payment record. `provider` is "manual" until a real processor
+/// (Stripe, ...) is integrated; that integration only ever needs to add rows here and flip
+/// Subscription.status via a webhook handler, never touch the tenant/profile domain.
+model Payment {
+  id String @id @default(cuid())
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  subscriptionId String?       @map("subscription_id")
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  amount   Decimal       @db.Decimal(10, 2)
+  currency String        @default("USD")
+  status   PaymentStatus @default(PENDING)
+
+  provider              String
+  providerTransactionId String? @map("provider_transaction_id")
+
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@map("payment")
+}
+
+/// Append-only. Never updated or deleted by application code, and never carries a
+/// password, token, or secret - see AuditLogService.
+model AuditLog {
+  id String @id @default(cuid())
+
+  /// Nullable: a system-initiated action (e.g. an automated subscription expiry) has no
+  /// human actor.
+  actorId   String? @map("actor_id")
+  /// Snapshot of the actor's role at the time of the action - roles can change later, and
+  /// the log should reflect what was true when the action happened, not now.
+  actorRole String? @map("actor_role")
+
+  /// Nullable: platform-level actions (creating a coordinator, for instance) have no tenant.
+  tenantId String? @map("tenant_id")
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  action     String
+  resource   String
+  resourceId String? @map("resource_id")
+  /// Small, structured, non-sensitive context (e.g. { "from": "ACTIVE", "to": "SUSPENDED" }).
+  metadata   Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+/// Visual configuration, one row per tenant. Colors are validated as hex strings at the DTO
+/// layer; `customCss` is optional and, if present, is emitted inside a scoped <style> tag by
+/// the frontend rather than evaluated - it can change appearance but cannot run script. See
+/// docs/SAAS-ARCHITECTURE.md "Theme security" for the full threat model and size limit.
+model TenantTheme {
+  id String @id @default(cuid())
+
+  tenantId String @unique @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  primaryColor    String  @default("#6366f1") @map("primary_color")
+  secondaryColor  String  @default("#64748b") @map("secondary_color")
+  accentColor     String  @default("#06b6d4") @map("accent_color")
+  backgroundColor String  @default("#ffffff") @map("background_color")
+  textColor       String  @default("#334155") @map("text_color")
+  headingColor    String  @default("#0f172a") @map("heading_color")
+  fontFamily      String  @default("Inter, sans-serif") @map("font_family")
+  /// CSS length, e.g. "0.5rem". Free-form rather than an enum: the frontend clamps it to a
+  /// sane range rather than the API rejecting values a future layout might want.
+  borderRadius    String  @default("0.5rem") @map("border_radius")
+  layout          String  @default("classic")
+  darkMode        Boolean @default(false) @map("dark_mode")
+  customCss       String? @map("custom_css") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_theme")
+}
+
+/// Site-level configuration, distinct from profile content (Person/Experience/...) and
+/// from Contact.socialLinks, which remains the one place social links live.
+model WebsiteSettings {
+  id String @id @default(cuid())
+
+  tenantId String @unique @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  websiteTitle String  @map("website_title")
+  description  String? @db.Text
+  faviconUrl   String? @map("favicon_url")
+  logoUrl      String? @map("logo_url")
+
+  /// Section keys shown on the public site, e.g. ["profile","experience","projects"].
+  visibleSections String[] @default(["profile", "experience", "projects", "skills", "achievements", "courses", "timeline", "management", "contact"]) @map("visible_sections")
+  /// Same keys, display order. Kept separate from visibleSections rather than relying on
+  /// array order alone, so a section can be reordered without a visibility side effect.
+  sectionOrder    String[] @default(["profile", "experience", "projects", "skills", "achievements", "courses", "timeline", "management", "contact"]) @map("section_order")
+
+  seoTitle       String? @map("seo_title")
+  seoDescription String? @map("seo_description")
+  ogImageUrl     String? @map("og_image_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("website_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Person - the existing profile domain, unmodified except for how its tenant boundary is
+// expressed: it now belongs to a Tenant instead of being one.
+// ---------------------------------------------------------------------------
+
+/// A Person is one tenant's profile content. Every child table below still carries
+/// personId exactly as before migration, and every admin query is still scoped by it -
+/// that scoping code is untouched. What changed is only how the current caller's personId
+/// is resolved: through their Tenant now, rather than Person being the tenant itself.
+/// See docs/SAAS-ARCHITECTURE.md "Why personId scoping did not need to change".
+model Person {
+  id String @id @default(cuid())
+
+  tenantId String @unique @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   name              String
   title             String
-  summary           String @db.Text
+  summary           String  @db.Text
   location          String
-  yearsOfExperience Int    @map("years_of_experience")
+  yearsOfExperience Int     @map("years_of_experience")
   avatar            String
   tagline           String
   linkedin          String?
   birthday          String?
 
-  contact          Contact?
-  admins           AdminUser[]
-  technologies     Technology[]
-  experiences      Experience[]
-  projects         Project[]
-  achievements     Achievement[]
-  courses          Course[]
-  timelineEvents   TimelineEvent[]
-  managementRoles  ManagementRole[]
-  skillCategories  SkillCategory[]
+  contact         Contact?
+  technologies    Technology[]
+  experiences     Experience[]
+  projects        Project[]
+  achievements    Achievement[]
+  courses         Course[]
+  timelineEvents  TimelineEvent[]
+  managementRoles ManagementRole[]
+  skillCategories SkillCategory[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -181,8 +515,8 @@ model Experience {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("experience")
 }
 
@@ -246,9 +580,9 @@ model Project {
   endDate     String? @map("end_date")
 
   /// Present in projects.json (all 16 rows) but absent from the frontend Project interface.
-  type    String?
+  type      String?
   /// Present in projects.json (all 16 rows) but absent from the frontend Project interface.
-  company String?
+  company   String?
   /// Present in projects.json (6/16) but absent from the frontend Project interface.
   isCurrent Boolean @default(false) @map("is_current")
 
@@ -269,8 +603,8 @@ model Project {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("project")
 }
 
@@ -362,8 +696,8 @@ model Achievement {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("achievement")
 }
 
@@ -403,8 +737,8 @@ model Course {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("course")
 }
 
@@ -447,8 +781,8 @@ model TimelineEvent {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("timeline_event")
 }
 
@@ -482,8 +816,8 @@ model ManagementRole {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([personId, sortOrder])
   @@unique([personId, legacyId])
+  @@index([personId, sortOrder])
   @@map("mgmt_role")
 }
 
@@ -544,12 +878,12 @@ model Skill {
   categoryId String        @map("category_id")
   category   SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  name String
+  name              String
   /// 0-9. 0 means "unranked" and the UI renders it as a grey no-rank tag - it is NOT the
   /// same as level 1, so it must never be coerced.
-  level Int
+  level             Int
   /// Year the skill was first used. Present on all 117 source records.
-  since Int?
+  since             Int?
   /// Declared by the frontend Skill interface, absent from all 117 records. The frontend
   /// resolves icons at runtime via SkillIconService.
   icon              String?
@@ -564,32 +898,4 @@ model Skill {
   @@unique([categoryId, name])
   @@index([categoryId, sortOrder])
   @@map("skill")
-}
-
-// ---------------------------------------------------------------------------
-// Auth - never exposed through any public endpoint
-// ---------------------------------------------------------------------------
-
-model AdminUser {
-  id String @id @default(cuid())
-
-  /// The tenant this administrator may manage. Every admin request is scoped to it, and
-  /// a by-id operation on a row belonging to another tenant is rejected as Not Found.
-  /// One admin manages one profile; a join table would replace this if that ever changes.
-  personId String @map("person_id")
-  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
-
-  email        String @unique
-  /// Argon2id hash. Never selected into a response DTO.
-  passwordHash String @map("password_hash")
-  name         String?
-
-  isActive    Boolean   @default(true) @map("is_active")
-  lastLoginAt DateTime? @map("last_login_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([personId])
-  @@map("admin_user")
 }

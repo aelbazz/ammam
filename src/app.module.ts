@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 import { PersonModule } from './person/person.module';
@@ -21,6 +22,13 @@ import { ManagementRoleModule } from './management-role/management-role.module';
 import { SkillModule } from './skill/skill.module';
 import { PublicModule } from './public/public.module';
 import { HealthModule } from './health/health.module';
+import { TenantAccessModule } from './tenant-access/tenant-access.module';
+import { AuditLogModule } from './audit/audit-log.module';
+import { TenantModule } from './tenant/tenant.module';
+import { UserModule } from './user/user.module';
+import { BillingModule } from './billing/billing.module';
+import { ThemeModule } from './theme/theme.module';
+import { WebsiteSettingsModule } from './website-settings/website-settings.module';
 
 @Module({
   imports: [
@@ -57,6 +65,17 @@ import { HealthModule } from './health/health.module';
 
     PublicModule,
     HealthModule,
+
+    TenantModule,
+    UserModule,
+    BillingModule,
+    ThemeModule,
+    WebsiteSettingsModule,
+
+    // Global, no controller of their own beyond what's listed: consulted from several
+    // otherwise-unrelated modules (tenant lifecycle, public profile access, audit trails).
+    TenantAccessModule,
+    AuditLogModule,
   ],
   providers: [
     // Order matters: rate limiting runs before authentication, so unauthenticated
@@ -64,6 +83,10 @@ import { HealthModule } from './health/health.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     // Deny-by-default. Routes opt out with @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Runs after JwtAuthGuard, so req.user is already populated. Deny-by-role: a route
+    // with no @Roles() is open to any authenticated caller; one with @Roles(...) requires
+    // the caller's role to be in that list. See RolesGuard.
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })

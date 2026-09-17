@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantAccessService } from '../tenant-access/tenant-access.service';
+import { normalizeSlug } from '../common/utils/slug.util';
 import {
   PublicAchievementDto,
   PublicContactDto,
@@ -14,88 +16,150 @@ import {
   PublicTimelineEventDto,
 } from './dto/public-profile.dto';
 
-/**
- * Slug used when a caller hits /public/profile with no tenant. Keeps single-profile
- * deployments working; a multi-tenant host addresses tenants explicitly via
- * /public/profile/:slug.
- */
-const DEFAULT_PERSON_SLUG = process.env.DEFAULT_PROFILE_SLUG ?? 'default';
-
 /** Ascending by the authored display order. Applied to every collection. */
 const byOrder = { sortOrder: 'asc' } as const;
 /** Root collections additionally hide unpublished rows from the public payload. */
 const publishedOnly = { isPublished: true } as const;
 
+export interface ResolvedProfile {
+  profile: PublicProfileDto;
+  tenantId: string;
+  personId: string;
+  /** Set when `slug` was found via TenantSlugHistory rather than the tenant's current slug -
+   *  the frontend can use this to update the address bar without a hard redirect. */
+  redirectedFromSlug: string | null;
+}
+
 @Injectable()
 export class PublicProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantAccess: TenantAccessService,
+  ) {}
 
   /**
-   * Loads the entire public profile.
+   * Resolves a tenant slug to its full public profile.
+   *
+   * Slugs are stored and compared lower-case, so lookup is case-insensitive without a
+   * database-level `LOWER()` scan. If the slug does not match any live tenant, retired
+   * slugs (TenantSlugHistory) are checked next, so a previously shared profile URL
+   * degrades to "moved" rather than a plain 404 - see docs/SAAS-ARCHITECTURE.md.
+   */
+  async resolveBySlug(rawSlug: string): Promise<ResolvedProfile> {
+    const slug = normalizeSlug(rawSlug);
+
+    let tenantId = await this.prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    let redirectedFromSlug: string | null = null;
+
+    if (!tenantId) {
+      const history = await this.prisma.tenantSlugHistory.findUnique({
+        where: { slug },
+        select: { tenantId: true },
+      });
+      if (!history) {
+        throw new NotFoundException(`No profile exists at "${rawSlug}"`);
+      }
+      tenantId = { id: history.tenantId };
+      redirectedFromSlug = slug;
+    }
+
+    const { profile, personId } = await this.buildProfile(tenantId.id);
+    return { profile, tenantId: tenantId.id, personId, redirectedFromSlug };
+  }
+
+  /**
+   * Loads and assembles the entire public profile for one tenant.
    *
    * This is a SINGLE Prisma query with nested includes - Prisma issues a small, fixed batch
    * of SQL statements (one per relation level), never one per parent row. There is no N+1
    * here and no query count that grows with the number of experiences or projects.
    *
-   * The payload is ~100 KB and bounded by the size of one person's CV, so it is returned
-   * whole and never paginated, exactly as the spec requires.
+   * The payload is bounded by the size of one person's CV, so it is returned whole and
+   * never paginated.
    */
-  async getPublicProfile(slug: string = DEFAULT_PERSON_SLUG): Promise<PublicProfileDto> {
-    const person = await this.prisma.person.findUnique({
-      where: { slug },
+  private async buildProfile(
+    tenantId: string,
+  ): Promise<{ profile: PublicProfileDto; personId: string }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
       include: {
-        contact: {
-          include: { socialLinks: { orderBy: byOrder } },
-        },
-        experiences: {
-          where: publishedOnly,
-          orderBy: byOrder,
+        subscription: { select: { status: true } },
+        theme: true,
+        settings: true,
+        person: {
           include: {
-            responsibilities: { orderBy: byOrder, select: { description: true } },
-            achievements: { orderBy: byOrder, select: { description: true } },
-            technologies: {
+            contact: {
+              include: { socialLinks: { orderBy: byOrder } },
+            },
+            experiences: {
+              where: publishedOnly,
               orderBy: byOrder,
-              select: { technology: { select: { name: true } } },
+              include: {
+                responsibilities: { orderBy: byOrder, select: { description: true } },
+                achievements: { orderBy: byOrder, select: { description: true } },
+                technologies: {
+                  orderBy: byOrder,
+                  select: { technology: { select: { name: true } } },
+                },
+              },
+            },
+            projects: {
+              where: publishedOnly,
+              orderBy: byOrder,
+              include: {
+                highlights: { orderBy: byOrder, select: { description: true } },
+                technologies: {
+                  orderBy: byOrder,
+                  select: { technology: { select: { name: true } } },
+                },
+              },
+            },
+            achievements: { where: publishedOnly, orderBy: byOrder },
+            courses: {
+              where: publishedOnly,
+              orderBy: byOrder,
+              include: { skills: { orderBy: byOrder, select: { name: true } } },
+            },
+            timelineEvents: { where: publishedOnly, orderBy: byOrder },
+            managementRoles: {
+              where: publishedOnly,
+              orderBy: byOrder,
+              include: {
+                keyResponsibilities: { orderBy: byOrder, select: { description: true } },
+                achievements: { orderBy: byOrder, select: { description: true } },
+              },
+            },
+            skillCategories: {
+              where: publishedOnly,
+              orderBy: byOrder,
+              include: { skills: { orderBy: byOrder } },
             },
           },
-        },
-        projects: {
-          where: publishedOnly,
-          orderBy: byOrder,
-          include: {
-            highlights: { orderBy: byOrder, select: { description: true } },
-            technologies: {
-              orderBy: byOrder,
-              select: { technology: { select: { name: true } } },
-            },
-          },
-        },
-        achievements: { where: publishedOnly, orderBy: byOrder },
-        courses: {
-          where: publishedOnly,
-          orderBy: byOrder,
-          include: { skills: { orderBy: byOrder, select: { name: true } } },
-        },
-        timelineEvents: { where: publishedOnly, orderBy: byOrder },
-        managementRoles: {
-          where: publishedOnly,
-          orderBy: byOrder,
-          include: {
-            keyResponsibilities: { orderBy: byOrder, select: { description: true } },
-            achievements: { orderBy: byOrder, select: { description: true } },
-          },
-        },
-        skillCategories: {
-          where: publishedOnly,
-          orderBy: byOrder,
-          include: { skills: { orderBy: byOrder } },
         },
       },
     });
 
-    if (!person) {
-      throw new NotFoundException(`No profile exists at "${slug}"`);
+    if (!tenant || !tenant.person) {
+      // A tenant that completed onboarding always has a Person (created in the same
+      // transaction); one without is either mid-onboarding or a data problem either way,
+      // not something to serve.
+      throw new NotFoundException('Profile not found');
     }
+
+    const access = this.tenantAccess.isPubliclyAccessible(
+      tenant.status,
+      tenant.subscription?.status ?? null,
+    );
+    if (!access.allowed) {
+      // Deliberately the same 404 as an unknown slug: a suspended tenant's URL should not
+      // announce "this tenant exists but is suspended" to an anonymous caller.
+      throw new NotFoundException('Profile not found');
+    }
+
+    const person = tenant.person;
 
     // Explicit field-by-field mapping. Nothing is spread from the Prisma row, so database
     // ids, timestamps and isPublished flags cannot leak into the response by accident.
@@ -232,7 +296,9 @@ export class PublicProfileService {
       })),
     };
 
-    return {
+    const profile: PublicProfileDto = {
+      // Internal UUID deliberately omitted - the slug is the only public identifier.
+      tenant: { slug: tenant.slug, name: tenant.name },
       person: personDto,
       contact,
       experiences,
@@ -242,40 +308,73 @@ export class PublicProfileService {
       timelineEvents,
       managementRoles,
       skills,
+      theme: {
+        primaryColor: tenant.theme?.primaryColor ?? '#6366f1',
+        secondaryColor: tenant.theme?.secondaryColor ?? '#64748b',
+        accentColor: tenant.theme?.accentColor ?? '#06b6d4',
+        backgroundColor: tenant.theme?.backgroundColor ?? '#ffffff',
+        textColor: tenant.theme?.textColor ?? '#334155',
+        headingColor: tenant.theme?.headingColor ?? '#0f172a',
+        fontFamily: tenant.theme?.fontFamily ?? 'Inter, sans-serif',
+        borderRadius: tenant.theme?.borderRadius ?? '0.5rem',
+        layout: tenant.theme?.layout ?? 'classic',
+        darkMode: tenant.theme?.darkMode ?? false,
+        customCss: tenant.theme?.customCss ?? null,
+      },
+      settings: {
+        websiteTitle: tenant.settings?.websiteTitle ?? tenant.name,
+        description: tenant.settings?.description ?? null,
+        faviconUrl: tenant.settings?.faviconUrl ?? null,
+        logoUrl: tenant.settings?.logoUrl ?? null,
+        visibleSections: tenant.settings?.visibleSections ?? [],
+        sectionOrder: tenant.settings?.sectionOrder ?? [],
+        seoTitle: tenant.settings?.seoTitle ?? null,
+        seoDescription: tenant.settings?.seoDescription ?? null,
+        ogImageUrl: tenant.settings?.ogImageUrl ?? null,
+      },
     };
+
+    return { profile, personId: person.id };
   }
 
   /**
    * Most recent updatedAt across every table that feeds the public payload. Used for
    * Last-Modified. Runs as one aggregate batch, not a full row scan.
    */
-  async getLastModified(slug: string = DEFAULT_PERSON_SLUG): Promise<Date> {
-    const person = await this.prisma.person.findUnique({
-      where: { slug },
-      select: { id: true, updatedAt: true },
-    });
-
-    if (!person) {
-      throw new NotFoundException('Profile not found');
-    }
-
-    const where = { personId: person.id };
+  async getLastModified(tenantId: string, personId: string): Promise<Date> {
+    const where = { personId };
     const max = { _max: { updatedAt: true } } as const;
 
-    const [contact, experiences, projects, achievements, courses, timeline, mgmt, skillCats] =
-      await Promise.all([
-        this.prisma.contact.aggregate({ where, ...max }),
-        this.prisma.experience.aggregate({ where, ...max }),
-        this.prisma.project.aggregate({ where, ...max }),
-        this.prisma.achievement.aggregate({ where, ...max }),
-        this.prisma.course.aggregate({ where, ...max }),
-        this.prisma.timelineEvent.aggregate({ where, ...max }),
-        this.prisma.managementRole.aggregate({ where, ...max }),
-        this.prisma.skillCategory.aggregate({ where, ...max }),
-      ]);
+    const [
+      tenant,
+      theme,
+      settings,
+      contact,
+      experiences,
+      projects,
+      achievements,
+      courses,
+      timeline,
+      mgmt,
+      skillCats,
+    ] = await Promise.all([
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { updatedAt: true } }),
+      this.prisma.tenantTheme.findUnique({ where: { tenantId }, select: { updatedAt: true } }),
+      this.prisma.websiteSettings.findUnique({ where: { tenantId }, select: { updatedAt: true } }),
+      this.prisma.contact.aggregate({ where, ...max }),
+      this.prisma.experience.aggregate({ where, ...max }),
+      this.prisma.project.aggregate({ where, ...max }),
+      this.prisma.achievement.aggregate({ where, ...max }),
+      this.prisma.course.aggregate({ where, ...max }),
+      this.prisma.timelineEvent.aggregate({ where, ...max }),
+      this.prisma.managementRole.aggregate({ where, ...max }),
+      this.prisma.skillCategory.aggregate({ where, ...max }),
+    ]);
 
     const candidates = [
-      person.updatedAt,
+      tenant?.updatedAt,
+      theme?.updatedAt,
+      settings?.updatedAt,
       contact._max.updatedAt,
       experiences._max.updatedAt,
       projects._max.updatedAt,

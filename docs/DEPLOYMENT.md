@@ -123,7 +123,7 @@ treat the seed as a recovery tool, not a routine step.
 Verify:
 
 ```bash
-curl -s https://<your-backend-domain>/api/v1/public/profile | head -c 400
+curl -s https://<your-backend-domain>/api/v1/public/tenants/default/profile | head -c 400
 ```
 
 ### c. Deploy the container
@@ -154,7 +154,8 @@ health check to use the same path.
 | `THROTTLE_LIMIT` / `THROTTLE_TTL_SECONDS` | no | Defaults `120` / `60` |
 | `AUTH_THROTTLE_LIMIT` | no | Default `5` |
 | `SWAGGER_ENABLED` | no | Defaults **off** in production; set `true` to expose `/api/docs` |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | seed only | Not needed at runtime |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | seed only | The default tenant's Client login. Not needed at runtime. |
+| `PLATFORM_ADMIN_EMAIL` / `_PASSWORD` | seed only | Bootstraps the first `Role.ADMIN` - there is no API to create one otherwise. |
 
 The app validates all of these at startup and refuses to boot on a bad value, including a
 `JWT_SECRET` under 32 characters or a `*` in `CORS_ORIGINS` while `NODE_ENV=production`.
@@ -172,6 +173,8 @@ The app validates all of these at startup and refuses to boot on a bad value, in
 | `DIRECT_URL` | Direct connection, used by `migrate deploy` | yes |
 | `ADMIN_EMAIL` | Seed only | only if running the opt-in seed |
 | `ADMIN_PASSWORD` | Seed only | only if running the opt-in seed |
+| `PLATFORM_ADMIN_EMAIL` | Seed only | bootstraps the first platform Admin |
+| `PLATFORM_ADMIN_PASSWORD` | Seed only | bootstraps the first platform Admin |
 | `DEPLOY_HOOK_URL` | Your host's deploy webhook | optional |
 | `PRODUCTION_URL` | Base URL for the post-deploy health check | optional |
 
@@ -221,8 +224,8 @@ Nothing in this document confirms your deployment works. After deploying, confir
 
 ```bash
 curl -fsS https://<your-backend-domain>/api/v1/health
-curl -fsS https://<your-backend-domain>/api/v1/public/profile | head -c 200
-curl -si  https://<your-backend-domain>/api/v1/public/profile \
+curl -fsS https://<your-backend-domain>/api/v1/public/tenants/default/profile | head -c 200
+curl -si  https://<your-backend-domain>/api/v1/public/tenants/default/profile \
   -H 'Origin: https://aelbazz.github.io' | grep -i access-control-allow-origin
 ```
 

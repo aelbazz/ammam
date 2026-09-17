@@ -20,10 +20,13 @@ import {
   UpdateSkillDto,
 } from './dto/skill.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('skills')
 @ApiBearerAuth()
-@Controller('skill-categories')
+@Roles(Role.CLIENT)
+@Controller('tenant/skill-categories')
 export class SkillController {
   constructor(private readonly service: SkillService) {}
 
@@ -31,7 +34,7 @@ export class SkillController {
   @ApiOperation({ summary: 'List skill categories with their skills' })
   @ApiResponse({ status: 200, type: [SkillCategoryResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<SkillCategoryResponseDto[]> {
-    return this.service.findAllCategories(user.personId);
+    return this.service.findAllCategories(user.personId!);
   }
 
   @Get(':id')
@@ -42,7 +45,7 @@ export class SkillController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<SkillCategoryResponseDto> {
-    return this.service.findCategory(user.personId, id);
+    return this.service.findCategory(user.personId!, id);
   }
 
   @Post()
@@ -53,7 +56,7 @@ export class SkillController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateSkillCategoryDto,
   ): Promise<SkillCategoryResponseDto> {
-    return this.service.createCategory(user.personId, dto);
+    return this.service.createCategory(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -64,7 +67,7 @@ export class SkillController {
     @Param('id') id: string,
     @Body() dto: UpdateSkillCategoryDto,
   ): Promise<SkillCategoryResponseDto> {
-    return this.service.updateCategory(user.personId, id, dto);
+    return this.service.updateCategory(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -72,7 +75,7 @@ export class SkillController {
   @ApiOperation({ summary: 'Delete a category and all of its skills' })
   @ApiResponse({ status: 204, description: 'Deleted' })
   removeCategory(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.removeCategory(user.personId, id);
+    return this.service.removeCategory(user.personId!, id);
   }
 
   @Post(':id/skills')
@@ -83,7 +86,7 @@ export class SkillController {
     @Param('id') id: string,
     @Body() dto: CreateSkillDto,
   ): Promise<SkillResponseDto> {
-    return this.service.addSkill(user.personId, id, dto);
+    return this.service.addSkill(user.personId!, id, dto);
   }
 
   @Patch('skills/:skillId')
@@ -94,7 +97,7 @@ export class SkillController {
     @Param('skillId') skillId: string,
     @Body() dto: UpdateSkillDto,
   ): Promise<SkillResponseDto> {
-    return this.service.updateSkill(user.personId, skillId, dto);
+    return this.service.updateSkill(user.personId!, skillId, dto);
   }
 
   @Delete('skills/:skillId')
@@ -105,6 +108,6 @@ export class SkillController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('skillId') skillId: string,
   ): Promise<void> {
-    return this.service.removeSkill(user.personId, skillId);
+    return this.service.removeSkill(user.personId!, skillId);
   }
 }

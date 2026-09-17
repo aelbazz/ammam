@@ -60,9 +60,13 @@ Record counts are actual, from the JSON files.
 | mgmt_role | `ManagementRole` | `management.json` | 3 | 1 : N |
 | — responsibilities | `ManagementResponsibilityItem` | `.keyResponsibilities[]` | 17 | via role |
 | — achievements | `ManagementAchievement` | `.achievements[]` | 12 | via role |
+¹ Superseded by `User` (with `role: CLIENT`) when the backend became a multi-tenant
+platform - see `docs/SAAS-ARCHITECTURE.md`. This table describes the schema as designed
+for the original single-profile migration; it is preserved as-is for that history.
+
 | skill category | `SkillCategory` | `skills.json.categories` | 14 | 1 : N *(addition, C3)* |
 | skill | `Skill` | `.categories[].skills[]` | 117 | via category *(addition, C3)* |
-| admin user | `AdminUser` | — | 1 | auth only, never public |
+| admin user | `AdminUser`¹ | — | 1 | auth only, never public |
 
 ---
 
@@ -443,7 +447,7 @@ Note `skills` is returned as `{ categories: [...] }` — the exact shape of `Ski
 `ConfigDataService.skills` keeps its current type.
 
 The frontend's `ConfigDataService` currently issues nine separate JSON requests. After
-migration it makes **one** call to `/api/v1/public/profile` and fans the response out into
+migration it makes **one** call to `/api/v1/public/tenants/:slug/profile` and fans the response out into
 the same nine signals — component code is unchanged.
 
 ---

@@ -11,61 +11,41 @@ export class PublicController {
   constructor(private readonly publicProfileService: PublicProfileService) {}
 
   /**
-   * The single endpoint the Angular frontend calls. Replaces the nine separate JSON file
-   * requests that ConfigDataService used to make.
+   * The single endpoint the Angular frontend calls for a tenant's public site. Replaces
+   * the nine separate JSON file requests the original static frontend used to make.
+   *
+   * Never trusts a UUID: the tenant is resolved purely from `tenantSlug`, and a suspended,
+   * archived, or subscription-inactive tenant returns the same 404 as a slug that was never
+   * registered - see TenantAccessService and docs/SAAS-ARCHITECTURE.md "Public API".
    */
   @Public()
-  @Get('profile/:slug')
+  @Get('tenants/:tenantSlug/profile')
   @ApiOperation({
-    summary: 'Complete public profile for one tenant',
+    summary: "Complete public profile for one tenant, addressed by that tenant's slug",
     description:
-      "Same payload as GET /public/profile, addressed by the profile's public slug. This " +
-      'is how a multi-tenant deployment serves more than one person from one API.',
+      'Returns tenant, person, contact, experiences (with responsibilities and ' +
+      'technologies), projects (with highlights and technologies), achievements, courses, ' +
+      'timeline events, management roles, skills, theme and website settings. Supports ' +
+      'ETag / If-None-Match and Last-Modified / If-Modified-Since. A retired slug (one the ' +
+      "tenant has since changed) still resolves, via TenantSlugHistory; the response's " +
+      '`X-Tenant-Slug-Current` header carries the current slug when that happens.',
   })
-  @ApiParam({ name: 'slug', example: 'default' })
+  @ApiParam({ name: 'tenantSlug', example: 'albaz' })
   @ApiResponse({ status: 200, type: PublicProfileDto })
   @ApiResponse({ status: 304, description: 'Not modified' })
-  @ApiResponse({ status: 404, description: 'No profile at that slug' })
-  getProfileBySlug(
-    @Param('slug') slug: string,
+  @ApiResponse({ status: 404, description: 'No accessible profile at that slug' })
+  async getProfileBySlug(
+    @Param('tenantSlug') tenantSlug: string,
     @Req() request: Request,
     @Res() response: Response,
   ): Promise<Response<PublicProfileDto | undefined>> {
-    return this.respond(slug, request, response);
-  }
+    const resolved = await this.publicProfileService.resolveBySlug(tenantSlug);
+    const lastModified = await this.publicProfileService.getLastModified(
+      resolved.tenantId,
+      resolved.personId,
+    );
 
-  @Public()
-  @Get('profile')
-  @ApiOperation({
-    summary: 'Complete public profile',
-    description:
-      'Returns the entire public profile in one response: person, contact, experiences ' +
-      '(with responsibilities and technologies), projects (with highlights and ' +
-      'technologies), achievements, courses, timeline events, management roles and skills. ' +
-      'Supports ETag / If-None-Match and Last-Modified / If-Modified-Since.',
-  })
-  @ApiResponse({ status: 200, type: PublicProfileDto })
-  @ApiResponse({ status: 304, description: 'Not modified - the cached copy is still current' })
-  @ApiResponse({ status: 404, description: 'Profile not found' })
-  getProfile(
-    @Req() request: Request,
-    @Res() response: Response,
-  ): Promise<Response<PublicProfileDto | undefined>> {
-    return this.respond(undefined, request, response);
-  }
-
-  /** Shared by both routes: identical payload, caching and validator handling. */
-  private async respond(
-    slug: string | undefined,
-    request: Request,
-    response: Response,
-  ): Promise<Response<PublicProfileDto | undefined>> {
-    const [profile, lastModified] = await Promise.all([
-      this.publicProfileService.getPublicProfile(slug),
-      this.publicProfileService.getLastModified(slug),
-    ]);
-
-    const etag = this.publicProfileService.computeETag(profile);
+    const etag = this.publicProfileService.computeETag(resolved.profile);
     // Last-Modified has one-second resolution, so it is truncated before comparison to
     // avoid a sub-second difference producing a spurious 200.
     const lastModifiedSeconds = Math.floor(lastModified.getTime() / 1000) * 1000;
@@ -80,12 +60,15 @@ export class PublicController {
     response.setHeader('Cache-Control', 'public, no-cache');
     response.setHeader('ETag', etag);
     response.setHeader('Last-Modified', new Date(lastModifiedSeconds).toUTCString());
+    if (resolved.redirectedFromSlug) {
+      response.setHeader('X-Tenant-Slug-Current', resolved.profile.tenant.slug);
+    }
 
     if (this.isFresh(request, etag, lastModifiedSeconds)) {
       return response.status(HttpStatus.NOT_MODIFIED).send();
     }
 
-    return response.status(HttpStatus.OK).json(profile);
+    return response.status(HttpStatus.OK).json(resolved.profile);
   }
 
   /**

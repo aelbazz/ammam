@@ -18,10 +18,13 @@ import {
 } from './dto/management-role.dto';
 import { ReorderDto } from '../experience/dto/experience.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('management-roles')
 @ApiBearerAuth()
-@Controller('management-roles')
+@Roles(Role.CLIENT)
+@Controller('tenant/management-roles')
 export class ManagementRoleController {
   constructor(private readonly service: ManagementRoleService) {}
 
@@ -29,7 +32,7 @@ export class ManagementRoleController {
   @ApiOperation({ summary: 'List management roles' })
   @ApiResponse({ status: 200, type: [ManagementRoleResponseDto] })
   findAll(@CurrentUser() user: AuthenticatedUser): Promise<ManagementRoleResponseDto[]> {
-    return this.service.findAll(user.personId);
+    return this.service.findAll(user.personId!);
   }
 
   @Get(':id')
@@ -40,7 +43,7 @@ export class ManagementRoleController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<ManagementRoleResponseDto> {
-    return this.service.findOne(user.personId, id);
+    return this.service.findOne(user.personId!, id);
   }
 
   @Post()
@@ -51,7 +54,7 @@ export class ManagementRoleController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateManagementRoleDto,
   ): Promise<ManagementRoleResponseDto> {
-    return this.service.create(user.personId, dto);
+    return this.service.create(user.personId!, dto);
   }
 
   @Patch('reorder')
@@ -59,7 +62,7 @@ export class ManagementRoleController {
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
   reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(user.personId, dto);
+    return this.service.reorder(user.personId!, dto);
   }
 
   @Patch(':id')
@@ -70,7 +73,7 @@ export class ManagementRoleController {
     @Param('id') id: string,
     @Body() dto: UpdateManagementRoleDto,
   ): Promise<ManagementRoleResponseDto> {
-    return this.service.update(user.personId, id, dto);
+    return this.service.update(user.personId!, id, dto);
   }
 
   @Delete(':id')
@@ -78,6 +81,6 @@ export class ManagementRoleController {
   @ApiOperation({ summary: 'Delete a management role and its children' })
   @ApiResponse({ status: 204, description: 'Deleted' })
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
-    return this.service.remove(user.personId, id);
+    return this.service.remove(user.personId!, id);
   }
 }

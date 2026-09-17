@@ -1,23 +1,28 @@
 /**
- * Import the existing Angular static profile data into PostgreSQL.
+ * Import the existing Angular static profile data into PostgreSQL, as the "default" tenant
+ * on the multi-tenant platform.
  *
  * This is a migration, not a fixture generator: every value comes from the JSON snapshot in
  * prisma/data/ (refreshed by scripts/sync-frontend-data.sh). No professional information is
  * invented anywhere in this file.
  *
- * Idempotent - upserts on the stable keys (person.slug, legacyId, technology.slug), so
- * re-running updates in place rather than duplicating.
+ * Idempotent - upserts on the stable keys (tenant.slug, (personId, legacyId),
+ * (personId, technology.slug)), so re-running updates in place rather than duplicating.
  *
  * Ordering: every collection's array index becomes sortOrder, so the first API response
  * reproduces the current UI order exactly. See docs/MIGRATION-MAPPING.md §5.1.
+ *
+ * A second tenant is created with `yarn tenant:create` (prisma/seed-tenant.ts), not here.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   AchievementCategory,
+  BillingInterval,
   ManagementLevel,
   Prisma,
   PrismaClient,
+  Role,
   TimelineEventType,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -25,7 +30,8 @@ import * as argon2 from 'argon2';
 const prisma = new PrismaClient();
 
 const DATA_DIR = join(__dirname, 'data');
-const PERSON_SLUG = 'default';
+const TENANT_SLUG = 'default';
+const DEFAULT_PLAN_ID = 'plan_free_default';
 
 // ---------------------------------------------------------------------------
 // Source shapes - mirror the Angular interfaces exactly (src/app/core/models)
@@ -206,10 +212,45 @@ function toEnum<T extends Record<string, string>>(
 // Seed steps
 // ---------------------------------------------------------------------------
 
-async function seedPerson(): Promise<string> {
+/**
+ * Ensures the default Plan exists. Its id is fixed (rather than a generated cuid) so this
+ * seed and the historical migration that first created it agree on the same row instead of
+ * creating a second "Free" plan.
+ */
+async function seedDefaultPlan(): Promise<void> {
+  await prisma.plan.upsert({
+    where: { id: DEFAULT_PLAN_ID },
+    create: {
+      id: DEFAULT_PLAN_ID,
+      name: 'Free',
+      description: 'Default plan for the initial import and locally-created tenants.',
+      price: 0,
+      currency: 'USD',
+      billingInterval: BillingInterval.MONTHLY,
+      active: true,
+      features: [],
+    },
+    update: {},
+  });
+}
+
+/**
+ * Creates the "default" Tenant (the account) plus its Person (the profile content). A
+ * Tenant is the account/SaaS boundary; Person is the existing, unmodified profile domain
+ * that lives inside it. See docs/SAAS-ARCHITECTURE.md.
+ */
+async function seedTenantAndPerson(): Promise<{ tenantId: string; personId: string }> {
   const src = readJson<SrcProfile>('profile.json');
 
-  const data = {
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: TENANT_SLUG },
+    // Marked ACTIVE, not the normal onboarding PENDING - this tenant's content already
+    // exists and is being imported, not freshly signed up.
+    create: { slug: TENANT_SLUG, name: src.name, status: 'ACTIVE' },
+    update: { name: src.name },
+  });
+
+  const personData = {
     name: src.name,
     title: src.title,
     summary: src.summary,
@@ -222,13 +263,36 @@ async function seedPerson(): Promise<string> {
   };
 
   const person = await prisma.person.upsert({
-    where: { slug: PERSON_SLUG },
-    create: { slug: PERSON_SLUG, ...data },
-    update: data,
+    where: { tenantId: tenant.id },
+    create: { tenantId: tenant.id, ...personData },
+    update: personData,
   });
 
+  await prisma.subscription.upsert({
+    where: { tenantId: tenant.id },
+    create: { tenantId: tenant.id, planId: DEFAULT_PLAN_ID, status: 'ACTIVE', autoRenew: false },
+    update: {},
+  });
+
+  await prisma.tenantTheme.upsert({
+    where: { tenantId: tenant.id },
+    create: { tenantId: tenant.id },
+    update: {},
+  });
+
+  await prisma.websiteSettings.upsert({
+    where: { tenantId: tenant.id },
+    create: { tenantId: tenant.id, websiteTitle: src.name, seoTitle: src.title },
+    update: {},
+  });
+
+  console.log(`  tenant            1  (${tenant.slug})`);
   console.log(`  person            1  (${person.name})`);
-  return person.id;
+  console.log('  subscription      1  (Free / ACTIVE)');
+  console.log('  tenant_theme      1  (defaults)');
+  console.log('  website_settings  1  (defaults)');
+
+  return { tenantId: tenant.id, personId: person.id };
 }
 
 async function seedContact(personId: string): Promise<void> {
@@ -628,31 +692,120 @@ async function seedSkills(personId: string): Promise<void> {
   console.log(`  skill_category   ${categories.length}  (+${skills} skills)`);
 }
 
-async function seedAdminUser(personId: string): Promise<void> {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
+/**
+ * The CLIENT account for the default tenant - the person who logs in and edits this
+ * profile. SEED_CLIENT_EMAIL/PASSWORD are preferred; the older ADMIN_EMAIL/PASSWORD names
+ * (from before this platform had a separate Role.ADMIN concept) are still accepted so an
+ * existing .env or CI secret keeps working.
+ */
+async function seedClientUser(tenantId: string): Promise<void> {
+  const email = process.env.SEED_CLIENT_EMAIL ?? process.env.ADMIN_EMAIL;
+  const password = process.env.SEED_CLIENT_PASSWORD ?? process.env.ADMIN_PASSWORD;
 
   if (!email || !password) {
-    console.log('  admin_user        -  (ADMIN_EMAIL / ADMIN_PASSWORD not set, skipped)');
+    console.log(
+      '  user (CLIENT)     -  (SEED_CLIENT_EMAIL / SEED_CLIENT_PASSWORD not set, skipped)',
+    );
     return;
   }
 
-  if (password.length < 12) {
-    throw new Error('ADMIN_PASSWORD must be at least 12 characters.');
+  if (password.length < 8) {
+    throw new Error('SEED_CLIENT_PASSWORD must be at least 8 characters (matches LoginDto).');
   }
 
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
 
-  await prisma.adminUser.upsert({
+  // User.tenantId is unique - a tenant has exactly one CLIENT. Keyed on tenantId rather
+  // than email so re-running the seed with a *different* SEED_CLIENT_EMAIL renames the
+  // existing client instead of colliding on that unique constraint by trying to insert a
+  // second one for the same tenant.
+  const existing = await prisma.user.findUnique({ where: { tenantId } });
+
+  if (existing) {
+    await prisma.user.update({
+      where: { tenantId },
+      data: { email, passwordHash },
+    });
+  } else {
+    await prisma.user.create({
+      data: { email, passwordHash, name: 'Administrator', role: Role.CLIENT, tenantId },
+    });
+  }
+
+  // The email is intentionally not logged.
+  console.log('  user (CLIENT)     1  (credentials taken from environment)');
+}
+
+/**
+ * The platform owner account. Unlike seedClientUser, this has no tenant - Role.ADMIN sees
+ * every tenant, so tenantId stays null. This is the platform's own bootstrap problem: there
+ * is no API to create the first Admin (every admin/coordinator-creation endpoint requires
+ * an authenticated Admin already), so it must be seeded.
+ */
+async function seedPlatformAdmin(): Promise<void> {
+  const email = process.env.PLATFORM_ADMIN_EMAIL;
+  const password = process.env.PLATFORM_ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    console.log(
+      '  user (ADMIN)      -  (PLATFORM_ADMIN_EMAIL / PLATFORM_ADMIN_PASSWORD not set, skipped)',
+    );
+    return;
+  }
+
+  if (password.length < 8) {
+    throw new Error('PLATFORM_ADMIN_PASSWORD must be at least 8 characters (matches LoginDto).');
+  }
+
+  const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+
+  await prisma.user.upsert({
     where: { email },
-    create: { email, passwordHash, name: 'Administrator', personId },
-    // personId is deliberately not updated: moving an existing admin to a different tenant
-    // should be an explicit act, not a side effect of re-running the seed.
+    create: {
+      email,
+      passwordHash,
+      name: 'Platform Administrator',
+      role: Role.ADMIN,
+      tenantId: null,
+    },
     update: { passwordHash },
   });
 
-  // The email is intentionally not logged.
-  console.log('  admin_user        1  (credentials taken from environment)');
+  console.log('  user (ADMIN)      1  (credentials taken from environment)');
+}
+
+/**
+ * A demo Coordinator account. Like the platform Admin, a Coordinator has no tenant of its
+ * own (tenantId stays null) - its tenants are found via Tenant.coordinatorId, not here.
+ */
+async function seedCoordinator(): Promise<void> {
+  const email = process.env.SEED_COORDINATOR_EMAIL;
+  const password = process.env.SEED_COORDINATOR_PASSWORD;
+
+  if (!email || !password) {
+    console.log('  user (COORDINATOR) -  (SEED_COORDINATOR_EMAIL / _PASSWORD not set, skipped)');
+    return;
+  }
+
+  if (password.length < 8) {
+    throw new Error('SEED_COORDINATOR_PASSWORD must be at least 8 characters (matches LoginDto).');
+  }
+
+  const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+
+  await prisma.user.upsert({
+    where: { email },
+    create: {
+      email,
+      passwordHash,
+      name: 'Coordinator',
+      role: Role.COORDINATOR,
+      tenantId: null,
+    },
+    update: { passwordHash },
+  });
+
+  console.log('  user (COORDINATOR) 1  (credentials taken from environment)');
 }
 
 // ---------------------------------------------------------------------------
@@ -663,7 +816,8 @@ async function main(): Promise<void> {
   const experiences = readJson<{ experiences: SrcExperience[] }>('experience.json').experiences;
   const projects = readJson<{ projects: SrcProject[] }>('projects.json').projects;
 
-  const personId = await seedPerson();
+  await seedDefaultPlan();
+  const { tenantId, personId } = await seedTenantAndPerson();
   await seedContact(personId);
 
   const techIds = await seedTechnologies(personId, experiences, projects);
@@ -675,7 +829,9 @@ async function main(): Promise<void> {
   await seedTimeline(personId);
   await seedManagementRoles(personId);
   await seedSkills(personId);
-  await seedAdminUser(personId);
+  await seedClientUser(tenantId);
+  await seedPlatformAdmin();
+  await seedCoordinator();
 
   console.log('\nImport complete.\n');
 }

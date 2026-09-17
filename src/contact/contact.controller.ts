@@ -3,10 +3,13 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { ContactService } from './contact.service';
 import { ContactResponseDto, UpdateContactDto, UpsertContactDto } from './dto/contact.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('contact')
 @ApiBearerAuth()
-@Controller('contact')
+@Roles(Role.CLIENT)
+@Controller('tenant/contact')
 export class ContactController {
   constructor(private readonly service: ContactService) {}
 
@@ -15,7 +18,7 @@ export class ContactController {
   @ApiResponse({ status: 200, type: ContactResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
   findOne(@CurrentUser() user: AuthenticatedUser): Promise<ContactResponseDto> {
-    return this.service.findOne(user.personId);
+    return this.service.findOne(user.personId!);
   }
 
   @Put()
@@ -26,7 +29,7 @@ export class ContactController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpsertContactDto,
   ): Promise<ContactResponseDto> {
-    return this.service.upsert(user.personId, dto);
+    return this.service.upsert(user.personId!, dto);
   }
 
   @Patch()
@@ -40,6 +43,6 @@ export class ContactController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateContactDto,
   ): Promise<ContactResponseDto> {
-    return this.service.update(user.personId, dto);
+    return this.service.update(user.personId!, dto);
   }
 }

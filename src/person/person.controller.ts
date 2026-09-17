@@ -3,10 +3,13 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { PersonService } from './person.service';
 import { PersonResponseDto, UpdatePersonDto } from './dto/person.dto';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('person')
 @ApiBearerAuth()
-@Controller('person')
+@Roles(Role.CLIENT)
+@Controller('tenant/profile')
 export class PersonController {
   constructor(private readonly service: PersonService) {}
 
@@ -15,7 +18,7 @@ export class PersonController {
   @ApiResponse({ status: 200, type: PersonResponseDto })
   @ApiResponse({ status: 404, description: 'Profile not found - run the seed' })
   findOne(@CurrentUser() user: AuthenticatedUser): Promise<PersonResponseDto> {
-    return this.service.findOne(user.personId);
+    return this.service.findOne(user.personId!);
   }
 
   @Patch()
@@ -31,6 +34,6 @@ export class PersonController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdatePersonDto,
   ): Promise<PersonResponseDto> {
-    return this.service.update(user.personId, dto);
+    return this.service.update(user.personId!, dto);
   }
 }

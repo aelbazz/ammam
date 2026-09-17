@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 
 export class AuthUserDto {
   @ApiProperty()
@@ -10,11 +11,14 @@ export class AuthUserDto {
   @ApiProperty({ nullable: true, type: String })
   name!: string | null;
 
-  @ApiProperty({ description: 'Id of the profile (tenant) this administrator manages' })
-  personId!: string;
+  @ApiProperty({ enum: Role })
+  role!: Role;
 
-  @ApiProperty({ description: 'Public slug of that profile' })
-  personSlug!: string;
+  @ApiProperty({ nullable: true, type: String, description: 'Set only for role CLIENT' })
+  tenantId!: string | null;
+
+  @ApiProperty({ nullable: true, type: String, description: 'Set only for role CLIENT' })
+  tenantSlug!: string | null;
 }
 
 export class LoginResponseDto {
