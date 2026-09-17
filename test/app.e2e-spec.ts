@@ -14,6 +14,9 @@ describe('Profile API (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let token: string;
+  /** The tenant this suite's administrator manages. Technologies are per-tenant, so any
+   *  "exactly one Angular" assertion has to be scoped to it - other tenants may own one. */
+  let personId: string;
 
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@localhost.dev';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'LocalDevAdmin!2026';
@@ -39,6 +42,7 @@ describe('Profile API (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email: adminEmail, password: adminPassword });
     token = res.body.accessToken;
+    personId = res.body.user.personId;
   });
 
   afterAll(async () => {
@@ -325,8 +329,8 @@ describe('Profile API (e2e)', () => {
       expect(res.body.technologies).toEqual(['Angular', 'A Brand New Technology']);
     });
 
-    it('reuses the existing Angular technology instead of duplicating it', async () => {
-      const matches = await prisma.technology.findMany({ where: { slug: 'angular' } });
+    it('reuses this tenant existing Angular technology instead of duplicating it', async () => {
+      const matches = await prisma.technology.findMany({ where: { slug: 'angular', personId } });
       expect(matches).toHaveLength(1);
     });
 
@@ -393,7 +397,7 @@ describe('Profile API (e2e)', () => {
         .expect(201);
 
       expect(res.body.technologies).toContain('TypeScript');
-      expect(await prisma.technology.count({ where: { slug: 'typescript' } })).toBe(1);
+      expect(await prisma.technology.count({ where: { slug: 'typescript', personId } })).toBe(1);
     });
 
     it('returns 404 for an unknown id', () =>
@@ -413,8 +417,8 @@ describe('Profile API (e2e)', () => {
       ).toBe(0);
     });
 
-    it('leaves the shared technologies in place after the experience is deleted', async () => {
-      expect(await prisma.technology.count({ where: { slug: 'angular' } })).toBe(1);
+    it('leaves the reusable technologies in place after the experience is deleted', async () => {
+      expect(await prisma.technology.count({ where: { slug: 'angular', personId } })).toBe(1);
     });
   });
 
@@ -429,7 +433,7 @@ describe('Profile API (e2e)', () => {
     });
 
     it('creating an existing technology returns the existing row', async () => {
-      const before = await prisma.technology.count();
+      const before = await prisma.technology.count({ where: { personId } });
       const res = await request(app.getHttpServer())
         .post('/api/v1/technologies')
         .set(auth())
@@ -437,13 +441,13 @@ describe('Profile API (e2e)', () => {
         .expect(201);
 
       expect(res.body.slug).toBe('angular');
-      expect(await prisma.technology.count()).toBe(before);
+      expect(await prisma.technology.count({ where: { personId } })).toBe(before);
     });
 
     it('cleans up the technology the CRUD test invented', async () => {
       // Technology is now keyed per tenant, so a bare slug is no longer a unique key.
       const invented = await prisma.technology.findFirst({
-        where: { slug: 'a-brand-new-technology' },
+        where: { slug: 'a-brand-new-technology', personId },
       });
       if (invented) {
         await request(app.getHttpServer())
@@ -452,7 +456,7 @@ describe('Profile API (e2e)', () => {
           .expect(204);
       }
       expect(
-        await prisma.technology.findFirst({ where: { slug: 'a-brand-new-technology' } }),
+        await prisma.technology.findFirst({ where: { slug: 'a-brand-new-technology', personId } }),
       ).toBeNull();
     });
   });
