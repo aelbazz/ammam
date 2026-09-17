@@ -17,22 +17,22 @@ export class TimelineEventService {
   ) {}
 
   /** Ordered by sortOrder, which carries the chronological order authored in the source data. */
-  async findAll(includeUnpublished = true): Promise<TimelineEventResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<TimelineEventResponseDto[]> {
     const rows = await this.prisma.timelineEvent.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: { sortOrder: 'asc' },
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<TimelineEventResponseDto> {
-    const row = await this.prisma.timelineEvent.findUnique({ where: { id } });
+  async findOne(personId: string, id: string): Promise<TimelineEventResponseDto> {
+    // Scoped by personId so a cross-tenant id is Not Found, not a data leak.
+    const row = await this.prisma.timelineEvent.findFirst({ where: { id, personId } });
     if (!row) throw new NotFoundException(`Timeline event ${id} not found`);
     return this.toDto(row);
   }
 
-  async create(dto: CreateTimelineEventDto): Promise<TimelineEventResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateTimelineEventDto): Promise<TimelineEventResponseDto> {
     const { legacyId, sortOrder, ...rest } = dto;
     const max = await this.prisma.timelineEvent.aggregate({
       where: { personId },
@@ -44,33 +44,45 @@ export class TimelineEventService {
         data: {
           ...rest,
           personId,
-          legacyId: legacyId ?? (await this.nextLegacyId()),
+          legacyId: legacyId ?? (await this.nextLegacyId(personId)),
           sortOrder: sortOrder ?? (max._max.sortOrder ?? -1) + 1,
         },
       }),
     );
   }
 
-  async update(id: string, dto: UpdateTimelineEventDto): Promise<TimelineEventResponseDto> {
-    await this.findOne(id);
+  async update(
+    personId: string,
+    id: string,
+    dto: UpdateTimelineEventDto,
+  ): Promise<TimelineEventResponseDto> {
+    await this.findOne(personId, id);
     return this.toDto(await this.prisma.timelineEvent.update({ where: { id }, data: dto }));
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findOne(personId, id);
     await this.prisma.timelineEvent.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
     await this.prisma.$transaction(
+      // Scoped by personId, so an id from another tenant matches nothing.
       dto.items.map((i) =>
-        this.prisma.timelineEvent.update({ where: { id: i.id }, data: { sortOrder: i.sortOrder } }),
+        this.prisma.timelineEvent.updateMany({
+          where: { id: i.id, personId },
+          data: { sortOrder: i.sortOrder },
+        }),
       ),
     );
   }
 
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.timelineEvent.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own legacy-id sequence, not the global one. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.timelineEvent.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^evt(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

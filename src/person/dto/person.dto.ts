@@ -61,6 +61,8 @@ export class UpdatePersonDto extends PartialType(CreatePersonDto) {}
 
 export class PersonResponseDto {
   @ApiProperty() id!: string;
+  @ApiProperty({ description: 'Public tenant key used by /public/profile/:slug' })
+  slug!: string;
   @ApiProperty() name!: string;
   @ApiProperty() title!: string;
   @ApiProperty() summary!: string;

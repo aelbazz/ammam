@@ -25,23 +25,23 @@ export class ManagementRoleService {
     private readonly personService: PersonService,
   ) {}
 
-  async findAll(includeUnpublished = true): Promise<ManagementRoleResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<ManagementRoleResponseDto[]> {
     const rows = await this.prisma.managementRole.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: byOrder,
       include,
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<ManagementRoleResponseDto> {
-    const row = await this.prisma.managementRole.findUnique({ where: { id }, include });
+  async findOne(personId: string, id: string): Promise<ManagementRoleResponseDto> {
+    // Scoped by personId so a cross-tenant id is Not Found, not a data leak.
+    const row = await this.prisma.managementRole.findFirst({ where: { id, personId }, include });
     if (!row) throw new NotFoundException(`Management role ${id} not found`);
     return this.toDto(row);
   }
 
-  async create(dto: CreateManagementRoleDto): Promise<ManagementRoleResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateManagementRoleDto): Promise<ManagementRoleResponseDto> {
     const { keyResponsibilities, achievements, legacyId, sortOrder, ...rest } = dto;
     const max = await this.prisma.managementRole.aggregate({
       where: { personId },
@@ -52,7 +52,7 @@ export class ManagementRoleService {
       data: {
         ...rest,
         personId,
-        legacyId: legacyId ?? (await this.nextLegacyId()),
+        legacyId: legacyId ?? (await this.nextLegacyId(personId)),
         sortOrder: sortOrder ?? (max._max.sortOrder ?? -1) + 1,
         keyResponsibilities: {
           create: (keyResponsibilities ?? []).map((description, i) => ({
@@ -69,8 +69,12 @@ export class ManagementRoleService {
     return this.toDto(created);
   }
 
-  async update(id: string, dto: UpdateManagementRoleDto): Promise<ManagementRoleResponseDto> {
-    await this.findOne(id);
+  async update(
+    personId: string,
+    id: string,
+    dto: UpdateManagementRoleDto,
+  ): Promise<ManagementRoleResponseDto> {
+    await this.findOne(personId, id);
     const { keyResponsibilities, achievements, ...rest } = dto;
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -104,24 +108,29 @@ export class ManagementRoleService {
     return this.toDto(updated);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findOne(personId, id);
     await this.prisma.managementRole.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
     await this.prisma.$transaction(
+      // Scoped by personId, so an id from another tenant matches nothing.
       dto.items.map((i) =>
-        this.prisma.managementRole.update({
-          where: { id: i.id },
+        this.prisma.managementRole.updateMany({
+          where: { id: i.id, personId },
           data: { sortOrder: i.sortOrder },
         }),
       ),
     );
   }
 
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.managementRole.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own legacy-id sequence, not the global one. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.managementRole.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^mgmt(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

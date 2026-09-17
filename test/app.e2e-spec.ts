@@ -441,7 +441,8 @@ describe('Profile API (e2e)', () => {
     });
 
     it('cleans up the technology the CRUD test invented', async () => {
-      const invented = await prisma.technology.findUnique({
+      // Technology is now keyed per tenant, so a bare slug is no longer a unique key.
+      const invented = await prisma.technology.findFirst({
         where: { slug: 'a-brand-new-technology' },
       });
       if (invented) {
@@ -451,7 +452,7 @@ describe('Profile API (e2e)', () => {
           .expect(204);
       }
       expect(
-        await prisma.technology.findUnique({ where: { slug: 'a-brand-new-technology' } }),
+        await prisma.technology.findFirst({ where: { slug: 'a-brand-new-technology' } }),
       ).toBeNull();
     });
   });

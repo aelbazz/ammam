@@ -21,6 +21,7 @@ import {
   UpdateExperienceDto,
 } from './dto/experience.dto';
 import { AttachTechnologyDto } from '../technology/dto/technology.dto';
+import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('experiences')
 @ApiBearerAuth()
@@ -31,32 +32,38 @@ export class ExperienceController {
   @Get()
   @ApiOperation({ summary: 'List experiences (published only for anonymous callers)' })
   @ApiResponse({ status: 200, type: [ExperienceResponseDto] })
-  findAll(): Promise<ExperienceResponseDto[]> {
-    return this.service.findAll(true);
+  findAll(@CurrentUser() user: AuthenticatedUser): Promise<ExperienceResponseDto[]> {
+    return this.service.findAll(user.personId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one experience with its responsibilities and technologies' })
   @ApiResponse({ status: 200, type: ExperienceResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string): Promise<ExperienceResponseDto> {
-    return this.service.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ExperienceResponseDto> {
+    return this.service.findOne(user.personId, id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create an experience, optionally with nested children' })
   @ApiResponse({ status: 201, type: ExperienceResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@Body() dto: CreateExperienceDto): Promise<ExperienceResponseDto> {
-    return this.service.create(dto);
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateExperienceDto,
+  ): Promise<ExperienceResponseDto> {
+    return this.service.create(user.personId, dto);
   }
 
   @Patch('reorder')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
-  reorder(@Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(dto);
+  reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
+    return this.service.reorder(user.personId, dto);
   }
 
   @Patch(':id')
@@ -68,18 +75,19 @@ export class ExperienceController {
   @ApiResponse({ status: 200, type: ExperienceResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   update(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateExperienceDto,
   ): Promise<ExperienceResponseDto> {
-    return this.service.update(id, dto);
+    return this.service.update(user.personId, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an experience and all of its children' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.service.remove(id);
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    return this.service.remove(user.personId, id);
   }
 
   // -- responsibilities -------------------------------------------------------
@@ -88,28 +96,33 @@ export class ExperienceController {
   @ApiOperation({ summary: 'Add a responsibility to an experience' })
   @ApiResponse({ status: 201, type: ChildItemResponseDto })
   addResponsibility(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: CreateChildItemDto,
   ): Promise<ChildItemResponseDto> {
-    return this.service.addResponsibility(id, dto);
+    return this.service.addResponsibility(user.personId, id, dto);
   }
 
   @Patch('responsibilities/:responsibilityId')
   @ApiOperation({ summary: 'Update a responsibility' })
   @ApiResponse({ status: 200, type: ChildItemResponseDto })
   updateResponsibility(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('responsibilityId') responsibilityId: string,
     @Body() dto: UpdateChildItemDto,
   ): Promise<ChildItemResponseDto> {
-    return this.service.updateResponsibility(responsibilityId, dto);
+    return this.service.updateResponsibility(user.personId, responsibilityId, dto);
   }
 
   @Delete('responsibilities/:responsibilityId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a responsibility' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  removeResponsibility(@Param('responsibilityId') responsibilityId: string): Promise<void> {
-    return this.service.removeResponsibility(responsibilityId);
+  removeResponsibility(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('responsibilityId') responsibilityId: string,
+  ): Promise<void> {
+    return this.service.removeResponsibility(user.personId, responsibilityId);
   }
 
   // -- achievements -----------------------------------------------------------
@@ -118,18 +131,22 @@ export class ExperienceController {
   @ApiOperation({ summary: 'Add an achievement to an experience' })
   @ApiResponse({ status: 201, type: ChildItemResponseDto })
   addAchievement(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: CreateChildItemDto,
   ): Promise<ChildItemResponseDto> {
-    return this.service.addAchievement(id, dto);
+    return this.service.addAchievement(user.personId, id, dto);
   }
 
   @Delete('achievements/:achievementId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an experience achievement' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  removeAchievement(@Param('achievementId') achievementId: string): Promise<void> {
-    return this.service.removeAchievement(achievementId);
+  removeAchievement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('achievementId') achievementId: string,
+  ): Promise<void> {
+    return this.service.removeAchievement(user.personId, achievementId);
   }
 
   // -- technologies -----------------------------------------------------------
@@ -141,10 +158,11 @@ export class ExperienceController {
   })
   @ApiResponse({ status: 201, type: ExperienceResponseDto })
   attachTechnology(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: AttachTechnologyDto,
   ): Promise<ExperienceResponseDto> {
-    return this.service.attachTechnology(id, dto);
+    return this.service.attachTechnology(user.personId, id, dto);
   }
 
   @Delete(':id/technologies/:technologyId')
@@ -152,9 +170,10 @@ export class ExperienceController {
   @ApiOperation({ summary: 'Detach a technology (the technology itself is not deleted)' })
   @ApiResponse({ status: 204, description: 'Detached' })
   detachTechnology(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('technologyId') technologyId: string,
   ): Promise<void> {
-    return this.service.detachTechnology(id, technologyId);
+    return this.service.detachTechnology(user.personId, id, technologyId);
   }
 }

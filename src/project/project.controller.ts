@@ -19,6 +19,7 @@ import {
 } from './dto/project.dto';
 import { CreateChildItemDto, ReorderDto } from '../experience/dto/experience.dto';
 import { AttachTechnologyDto } from '../technology/dto/technology.dto';
+import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('projects')
 @ApiBearerAuth()
@@ -29,66 +30,80 @@ export class ProjectController {
   @Get()
   @ApiOperation({ summary: 'List projects (published only for anonymous callers)' })
   @ApiResponse({ status: 200, type: [ProjectResponseDto] })
-  findAll(): Promise<ProjectResponseDto[]> {
-    return this.service.findAll(true);
+  findAll(@CurrentUser() user: AuthenticatedUser): Promise<ProjectResponseDto[]> {
+    return this.service.findAll(user.personId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one project with highlights and technologies' })
   @ApiResponse({ status: 200, type: ProjectResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string): Promise<ProjectResponseDto> {
-    return this.service.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<ProjectResponseDto> {
+    return this.service.findOne(user.personId, id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a project' })
   @ApiResponse({ status: 201, type: ProjectResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@Body() dto: CreateProjectDto): Promise<ProjectResponseDto> {
-    return this.service.create(dto);
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateProjectDto,
+  ): Promise<ProjectResponseDto> {
+    return this.service.create(user.personId, dto);
   }
 
   @Patch('reorder')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Bulk-update display order' })
   @ApiResponse({ status: 204, description: 'Reordered' })
-  reorder(@Body() dto: ReorderDto): Promise<void> {
-    return this.service.reorder(dto);
+  reorder(@CurrentUser() user: AuthenticatedUser, @Body() dto: ReorderDto): Promise<void> {
+    return this.service.reorder(user.personId, dto);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a project' })
   @ApiResponse({ status: 200, type: ProjectResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  update(@Param('id') id: string, @Body() dto: UpdateProjectDto): Promise<ProjectResponseDto> {
-    return this.service.update(id, dto);
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ): Promise<ProjectResponseDto> {
+    return this.service.update(user.personId, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a project and its highlights' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.service.remove(id);
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    return this.service.remove(user.personId, id);
   }
 
   @Post(':id/highlights')
   @ApiOperation({ summary: 'Add a highlight to a project' })
   @ApiResponse({ status: 201, type: ProjectHighlightResponseDto })
   addHighlight(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: CreateChildItemDto,
   ): Promise<ProjectHighlightResponseDto> {
-    return this.service.addHighlight(id, dto);
+    return this.service.addHighlight(user.personId, id, dto);
   }
 
   @Delete('highlights/:highlightId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a highlight' })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  removeHighlight(@Param('highlightId') highlightId: string): Promise<void> {
-    return this.service.removeHighlight(highlightId);
+  removeHighlight(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('highlightId') highlightId: string,
+  ): Promise<void> {
+    return this.service.removeHighlight(user.personId, highlightId);
   }
 
   @Post(':id/technologies')
@@ -98,10 +113,11 @@ export class ProjectController {
   })
   @ApiResponse({ status: 201, type: ProjectResponseDto })
   attachTechnology(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: AttachTechnologyDto,
   ): Promise<ProjectResponseDto> {
-    return this.service.attachTechnology(id, dto);
+    return this.service.attachTechnology(user.personId, id, dto);
   }
 
   @Delete(':id/technologies/:technologyId')
@@ -109,9 +125,10 @@ export class ProjectController {
   @ApiOperation({ summary: 'Detach a technology (the technology itself is not deleted)' })
   @ApiResponse({ status: 204, description: 'Detached' })
   detachTechnology(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Param('technologyId') technologyId: string,
   ): Promise<void> {
-    return this.service.detachTechnology(id, technologyId);
+    return this.service.detachTechnology(user.personId, id, technologyId);
   }
 }

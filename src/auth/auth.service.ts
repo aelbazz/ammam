@@ -28,6 +28,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<LoginResponseDto> {
     const user = await this.prisma.adminUser.findUnique({
       where: { email: dto.email.toLowerCase().trim() },
+      include: { person: { select: { slug: true } } },
     });
 
     const passwordMatches = await this.verify(user?.passwordHash ?? DUMMY_HASH, dto.password);
@@ -51,7 +52,13 @@ export class AuthService {
     return {
       accessToken: await this.jwt.signAsync(payload, { expiresIn }),
       expiresIn: this.toSeconds(expiresIn),
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        personId: user.personId,
+        personSlug: user.person.slug,
+      },
     };
   }
 

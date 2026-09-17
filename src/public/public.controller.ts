@@ -1,6 +1,6 @@
-import { Controller, Get, HttpStatus, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicProfileService } from './public.service';
 import { PublicProfileDto } from './dto/public-profile.dto';
 import { Public } from '../common/decorators/public.decorator';
@@ -15,6 +15,26 @@ export class PublicController {
    * requests that ConfigDataService used to make.
    */
   @Public()
+  @Get('profile/:slug')
+  @ApiOperation({
+    summary: 'Complete public profile for one tenant',
+    description:
+      "Same payload as GET /public/profile, addressed by the profile's public slug. This " +
+      'is how a multi-tenant deployment serves more than one person from one API.',
+  })
+  @ApiParam({ name: 'slug', example: 'default' })
+  @ApiResponse({ status: 200, type: PublicProfileDto })
+  @ApiResponse({ status: 304, description: 'Not modified' })
+  @ApiResponse({ status: 404, description: 'No profile at that slug' })
+  getProfileBySlug(
+    @Param('slug') slug: string,
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<Response<PublicProfileDto | undefined>> {
+    return this.respond(slug, request, response);
+  }
+
+  @Public()
   @Get('profile')
   @ApiOperation({
     summary: 'Complete public profile',
@@ -27,13 +47,22 @@ export class PublicController {
   @ApiResponse({ status: 200, type: PublicProfileDto })
   @ApiResponse({ status: 304, description: 'Not modified - the cached copy is still current' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
-  async getProfile(
+  getProfile(
     @Req() request: Request,
     @Res() response: Response,
   ): Promise<Response<PublicProfileDto | undefined>> {
+    return this.respond(undefined, request, response);
+  }
+
+  /** Shared by both routes: identical payload, caching and validator handling. */
+  private async respond(
+    slug: string | undefined,
+    request: Request,
+    response: Response,
+  ): Promise<Response<PublicProfileDto | undefined>> {
     const [profile, lastModified] = await Promise.all([
-      this.publicProfileService.getPublicProfile(),
-      this.publicProfileService.getLastModified(),
+      this.publicProfileService.getPublicProfile(slug),
+      this.publicProfileService.getLastModified(slug),
     ]);
 
     const etag = this.publicProfileService.computeETag(profile);

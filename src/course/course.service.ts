@@ -15,23 +15,23 @@ export class CourseService {
     private readonly personService: PersonService,
   ) {}
 
-  async findAll(includeUnpublished = true): Promise<CourseResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<CourseResponseDto[]> {
     const rows = await this.prisma.course.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: { sortOrder: 'asc' },
       include,
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<CourseResponseDto> {
-    const row = await this.prisma.course.findUnique({ where: { id }, include });
+  async findOne(personId: string, id: string): Promise<CourseResponseDto> {
+    // Scoped by personId so a cross-tenant id is Not Found, not a data leak.
+    const row = await this.prisma.course.findFirst({ where: { id, personId }, include });
     if (!row) throw new NotFoundException(`Course ${id} not found`);
     return this.toDto(row);
   }
 
-  async create(dto: CreateCourseDto): Promise<CourseResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateCourseDto): Promise<CourseResponseDto> {
     const { skills, legacyId, sortOrder, ...rest } = dto;
     const max = await this.prisma.course.aggregate({
       where: { personId },
@@ -42,7 +42,7 @@ export class CourseService {
       data: {
         ...rest,
         personId,
-        legacyId: legacyId ?? (await this.nextLegacyId()),
+        legacyId: legacyId ?? (await this.nextLegacyId(personId)),
         sortOrder: sortOrder ?? (max._max.sortOrder ?? -1) + 1,
         skills: { create: (skills ?? []).map((name, i) => ({ name, sortOrder: i })) },
       },
@@ -51,8 +51,8 @@ export class CourseService {
     return this.toDto(created);
   }
 
-  async update(id: string, dto: UpdateCourseDto): Promise<CourseResponseDto> {
-    await this.findOne(id);
+  async update(personId: string, id: string, dto: UpdateCourseDto): Promise<CourseResponseDto> {
+    await this.findOne(personId, id);
     const { skills, ...rest } = dto;
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -72,21 +72,29 @@ export class CourseService {
     return this.toDto(updated);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findOne(personId, id);
     await this.prisma.course.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
     await this.prisma.$transaction(
+      // Scoped by personId, so an id from another tenant matches nothing.
       dto.items.map((i) =>
-        this.prisma.course.update({ where: { id: i.id }, data: { sortOrder: i.sortOrder } }),
+        this.prisma.course.updateMany({
+          where: { id: i.id, personId },
+          data: { sortOrder: i.sortOrder },
+        }),
       ),
     );
   }
 
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.course.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own legacy-id sequence, not the global one. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.course.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^edu(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

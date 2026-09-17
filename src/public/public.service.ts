@@ -14,7 +14,12 @@ import {
   PublicTimelineEventDto,
 } from './dto/public-profile.dto';
 
-const DEFAULT_PERSON_SLUG = 'default';
+/**
+ * Slug used when a caller hits /public/profile with no tenant. Keeps single-profile
+ * deployments working; a multi-tenant host addresses tenants explicitly via
+ * /public/profile/:slug.
+ */
+const DEFAULT_PERSON_SLUG = process.env.DEFAULT_PROFILE_SLUG ?? 'default';
 
 /** Ascending by the authored display order. Applied to every collection. */
 const byOrder = { sortOrder: 'asc' } as const;
@@ -89,7 +94,7 @@ export class PublicProfileService {
     });
 
     if (!person) {
-      throw new NotFoundException('Profile not found');
+      throw new NotFoundException(`No profile exists at "${slug}"`);
     }
 
     // Explicit field-by-field mapping. Nothing is spread from the Prisma row, so database

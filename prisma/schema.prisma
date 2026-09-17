@@ -72,11 +72,13 @@ enum ManagementLevel {
 // Person - the central profile entity (singleton for this application)
 // ---------------------------------------------------------------------------
 
+/// A Person is a tenant: one profile and everything under it. Every other person-owned
+/// table carries personId, and every admin query is scoped by the caller's tenant, so two
+/// profiles in the same database cannot see or modify each other's rows.
 model Person {
-  id     String @id @default(cuid())
-  /// Addressable key for the singleton; seeded as "default". Leaves room for multiple
-  /// profiles later without over-engineering now.
-  slug   String @unique
+  id   String @id @default(cuid())
+  /// Public, URL-safe tenant key. Used by GET /public/profile/:slug.
+  slug String @unique
 
   name              String
   title             String
@@ -89,6 +91,8 @@ model Person {
   birthday          String?
 
   contact          Contact?
+  admins           AdminUser[]
+  technologies     Technology[]
   experiences      Experience[]
   projects         Project[]
   achievements     Achievement[]
@@ -150,7 +154,7 @@ model ContactSocialLink {
 
 model Experience {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -178,6 +182,7 @@ model Experience {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("experience")
 }
 
@@ -229,7 +234,7 @@ model ExperienceTechnology {
 
 model Project {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -265,6 +270,7 @@ model Project {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("project")
 }
 
@@ -301,14 +307,23 @@ model ProjectTechnology {
 // Technology - reusable across experiences and projects
 // ---------------------------------------------------------------------------
 
+/// Reusable within one tenant, across that tenant's experiences and projects.
+///
+/// Deliberately NOT shared between tenants: a global table would let one tenant rename or
+/// delete a technology another tenant's records point at, and would expose every tenant's
+/// stack through the list endpoint. The cost is one "Angular" row per tenant, which is the
+/// right trade for isolation.
 model Technology {
   id String @id @default(cuid())
 
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
   /// Display name, preserving the casing of its first occurrence in the source data.
-  name String @unique
+  name String
   /// Normalised matching key (lower-cased, punctuation collapsed) so "Node.js" and "NodeJS"
   /// cannot split into two rows. This is what the seed and the attach endpoints upsert on.
-  slug String @unique
+  slug String
 
   experiences ExperienceTechnology[]
   projects    ProjectTechnology[]
@@ -316,6 +331,9 @@ model Technology {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([personId, slug])
+  @@unique([personId, name])
+  @@index([personId])
   @@map("technology")
 }
 
@@ -325,7 +343,7 @@ model Technology {
 
 model Achievement {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -345,6 +363,7 @@ model Achievement {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("achievement")
 }
 
@@ -354,7 +373,7 @@ model Achievement {
 
 model Course {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -385,6 +404,7 @@ model Course {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("course")
 }
 
@@ -409,7 +429,7 @@ model CourseSkill {
 
 model TimelineEvent {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -428,6 +448,7 @@ model TimelineEvent {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("timeline_event")
 }
 
@@ -437,7 +458,7 @@ model TimelineEvent {
 
 model ManagementRole {
   id       String @id @default(cuid())
-  legacyId String @unique @map("legacy_id")
+  legacyId String @map("legacy_id")
 
   personId String @map("person_id")
   person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -462,6 +483,7 @@ model ManagementRole {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([personId, sortOrder])
+  @@unique([personId, legacyId])
   @@map("mgmt_role")
 }
 
@@ -551,6 +573,12 @@ model Skill {
 model AdminUser {
   id String @id @default(cuid())
 
+  /// The tenant this administrator may manage. Every admin request is scoped to it, and
+  /// a by-id operation on a row belonging to another tenant is rejected as Not Found.
+  /// One admin manages one profile; a join table would replace this if that ever changes.
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
   email        String @unique
   /// Argon2id hash. Never selected into a response DTO.
   passwordHash String @map("password_hash")
@@ -562,5 +590,6 @@ model AdminUser {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([personId])
   @@map("admin_user")
 }

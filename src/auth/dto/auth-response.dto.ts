@@ -9,6 +9,12 @@ export class AuthUserDto {
 
   @ApiProperty({ nullable: true, type: String })
   name!: string | null;
+
+  @ApiProperty({ description: 'Id of the profile (tenant) this administrator manages' })
+  personId!: string;
+
+  @ApiProperty({ description: 'Public slug of that profile' })
+  personSlug!: string;
 }
 
 export class LoginResponseDto {

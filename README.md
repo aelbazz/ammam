@@ -3,12 +3,15 @@
 NestJS + Prisma + PostgreSQL backend for the Angular profile/portfolio site. It moves the
 profile data out of the frontend and makes the database the source of truth.
 
+**Every profile is a tenant.** One deployment can host many people's portfolios, each with
+its own administrator, fully isolated from the others.
+
 ```
 Angular (GitHub Pages)  ──HTTPS──▶  NestJS REST API  ──▶  Prisma  ──▶  PostgreSQL
 ```
 
-The Angular app calls **one** endpoint — `GET /api/v1/public/profile` — instead of loading
-nine static JSON files.
+The Angular app calls **one** endpoint — `GET /api/v1/public/profile/:slug` — instead of
+loading nine static JSON files.
 
 ## Documentation
 
@@ -76,8 +79,9 @@ A run reports exactly what it imported:
   admin_user        1  (credentials taken from environment)
 ```
 
-The seed is **idempotent** — it upserts on `person.slug`, `legacyId` and `technology.slug`,
-so re-running updates in place rather than duplicating.
+The seed is **idempotent** — it upserts on `person.slug`, `(personId, legacyId)` and
+`(personId, technology.slug)`, so re-running updates in place rather than duplicating. It
+targets the default tenant; other tenants are created with `yarn tenant:create`.
 
 ### Technology de-duplication
 
@@ -88,6 +92,44 @@ project gets **one** row referenced from both sides. In the current data that is
 technologies from 130 references, with 4 shared between the two.
 
 ---
+
+## Multi-tenancy
+
+A `Person` **is** a tenant: one profile and everything beneath it. An `AdminUser` belongs to
+exactly one Person and can only ever see or change that tenant's rows.
+
+```
+Person "ahmed"  ──  AdminUser ahmed@…   ──▶  /api/v1/public/profile/ahmed
+Person "jane"   ──  AdminUser jane@…    ──▶  /api/v1/public/profile/jane
+```
+
+**The tenant is never client-supplied.** It is resolved from the database during JWT
+validation, so an administrator cannot name someone else's tenant in a parameter or body.
+
+Isolation is enforced at three levels:
+
+| | How |
+| --- | --- |
+| Lists | Every query filters on `personId`. |
+| By-id reads and writes | `findFirst({ where: { id, personId } })` rather than `findUnique({ where: { id } })`, so another tenant's real id returns **404**, not their data. |
+| Child rows | Reached through the parent: `where: { id, experience: { personId } }`. |
+| Bulk reorder | `updateMany` filtered by `personId`, so a foreign id matches nothing instead of silently renumbering another tenant's rows. |
+
+Key spaces are per-tenant too: `legacyId` is unique on `(personId, legacyId)` so two people
+can each have an `exp1`, and `technology` is owned by a tenant rather than shared. A global
+technology table would have let one tenant rename or delete a technology another tenant's
+records point at, and would have exposed every tenant's stack through the list endpoint.
+
+### Adding a tenant
+
+```bash
+TENANT_SLUG=jane TENANT_NAME='Jane Doe' \
+TENANT_ADMIN_EMAIL=jane@example.com TENANT_ADMIN_PASSWORD='<12+ chars>' \
+yarn tenant:create
+```
+
+That creates an empty profile and its administrator. They sign in at `/admin` and fill it in
+themselves; no data is copied from any other tenant.
 
 ## Domain model
 
@@ -126,11 +168,13 @@ Three deliberate additions to the existing model, each justified in the mapping 
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/api/v1/public/profile` | The whole profile in one response. ETag + Last-Modified. |
+| `GET` | `/api/v1/public/profile/:slug` | One tenant's whole profile. ETag + Last-Modified. |
+| `GET` | `/api/v1/public/profile` | Same, for the default tenant (`DEFAULT_PROFILE_SLUG`). |
 | `GET` | `/api/v1/health` | Liveness/readiness, including a real database round-trip. |
 
-Read-only `GET` endpoints for individual collections (`/experiences`, `/projects`,
-`/technologies`, `/skill-categories`, …) are also anonymous, and return published rows only.
+Those two are the **only** anonymous endpoints, alongside `POST /auth/login`. The
+collection endpoints (`/experiences`, `/projects`, `/technologies`, …) exist for the admin
+UI and require a token — the public site reads the profile payload and nothing else.
 
 ### Admin — requires `Authorization: Bearer <token>`
 
@@ -139,9 +183,10 @@ POST   /api/v1/auth/login
 GET    /api/v1/auth/me
 ```
 
-Full CRUD for `person` (singleton), `contact` (singleton), `experience`, `project`,
-`technology`, `achievement`, `course`, `timeline-event`, `management-role` and
-`skill-category`, plus nested operations:
+Full CRUD for `person`, `contact`, `experience`, `project`, `technology`, `achievement`,
+`course`, `timeline-event`, `management-role` and `skill-category` — every one of them
+scoped to the caller's tenant. `person` and `contact` take no id in the path, because the
+tenant already identifies which profile is being edited. Nested operations:
 
 ```
 POST   /api/v1/experiences/:id/responsibilities
@@ -175,6 +220,7 @@ paginated; admin list endpoints accept `page`/`limit`.
 | --- | --- |
 | Authentication | JWT bearer tokens, Argon2id password hashing |
 | Authorization | Global `JwtAuthGuard` — **deny by default**, routes opt out with `@Public()` |
+| Tenant isolation | Resolved from the database at JWT validation, never client-supplied; every query scoped by `personId` |
 | Rate limiting | 120 req/min globally; **5 req/min** on `POST /auth/login` |
 | Headers | Helmet |
 | CORS | Explicit origin allowlist; the app **refuses to start** if `CORS_ORIGINS` contains `*` in production |
@@ -209,6 +255,7 @@ the first request that needs it. See `.env.example`.
 | `THROTTLE_TTL_SECONDS` / `THROTTLE_LIMIT` | no | Default `60` / `120` |
 | `AUTH_THROTTLE_LIMIT` | no | Default `5` |
 | `SWAGGER_ENABLED` | no | Defaults on outside production |
+| `DEFAULT_PROFILE_SLUG` | no | Tenant served by `/public/profile` with no slug. Default `default`. |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | seed only | Supply as deployment secrets; never commit |
 
 ---
@@ -229,6 +276,12 @@ technology de-duplication, no metadata leakage, published-only filtering, ETag/3
 with nested children and technology reuse, rate limiting, and that anonymous callers cannot
 mutate anything.
 
+`test/tenancy.e2e-spec.ts` covers isolation specifically: it creates two tenants, gives one
+of them content, then checks that the other — holding a **valid** token and using the
+first's **real** record ids — gets 404 on every read, update, delete, nested-child and
+reorder attempt, and that both tenants can independently own a technology of the same name
+and a record with the same `legacyId`.
+
 ---
 
 ## Scripts
@@ -240,7 +293,8 @@ mutate anything.
 | `yarn lint` | ESLint, zero warnings tolerated |
 | `yarn prisma:migrate` | Create + apply a migration (development only) |
 | `yarn prisma:deploy` | Apply committed migrations (**production**) |
-| `yarn db:seed` | Import the vendored Angular data |
+| `yarn db:seed` | Import the vendored Angular data into the default tenant |
+| `yarn tenant:create` | Create an additional profile (tenant) and its administrator |
 | `yarn db:reset` | Drop, re-migrate, re-seed (destructive; local only) |
 | `./scripts/sync-frontend-data.sh [path]` | Refresh the vendored snapshot from the Angular repo |
 

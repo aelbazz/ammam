@@ -32,30 +32,29 @@ export class ExperienceService {
     private readonly personService: PersonService,
   ) {}
 
-  async findAll(includeUnpublished = true): Promise<ExperienceResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<ExperienceResponseDto[]> {
     const rows = await this.prisma.experience.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: byOrder,
       include: experienceInclude,
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<ExperienceResponseDto> {
-    return this.toDto(await this.findEntity(id));
+  async findOne(personId: string, id: string): Promise<ExperienceResponseDto> {
+    return this.toDto(await this.findEntity(personId, id));
   }
 
-  async create(dto: CreateExperienceDto): Promise<ExperienceResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateExperienceDto): Promise<ExperienceResponseDto> {
     const { responsibilities, achievements, technologies, legacyId, sortOrder, ...rest } = dto;
 
-    const technologyIds = await this.resolveTechnologies(technologies);
+    const technologyIds = await this.resolveTechnologies(personId, technologies);
 
     const created = await this.prisma.experience.create({
       data: {
         ...rest,
         personId,
-        legacyId: legacyId ?? (await this.nextLegacyId()),
+        legacyId: legacyId ?? (await this.nextLegacyId(personId)),
         sortOrder: sortOrder ?? (await this.nextSortOrder(personId)),
         responsibilities: {
           create: (responsibilities ?? []).map((description, i) => ({ description, sortOrder: i })),
@@ -78,11 +77,17 @@ export class ExperienceService {
    * it - omitting `responsibilities` leaves them alone, sending `[]` clears them. Without
    * that distinction a PATCH of the job title would silently wipe the responsibilities.
    */
-  async update(id: string, dto: UpdateExperienceDto): Promise<ExperienceResponseDto> {
-    await this.findEntity(id);
+  async update(
+    personId: string,
+    id: string,
+    dto: UpdateExperienceDto,
+  ): Promise<ExperienceResponseDto> {
+    await this.findEntity(personId, id);
     const { responsibilities, achievements, technologies, ...rest } = dto;
 
-    const technologyIds = technologies ? await this.resolveTechnologies(technologies) : undefined;
+    const technologyIds = technologies
+      ? await this.resolveTechnologies(personId, technologies)
+      : undefined;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.experience.update({ where: { id }, data: rest });
@@ -126,16 +131,18 @@ export class ExperienceService {
     return this.toDto(updated);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findEntity(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findEntity(personId, id);
     await this.prisma.experience.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
+    // updateMany with personId in the filter: an id from another tenant simply matches
+    // nothing, instead of silently renumbering their rows.
     await this.prisma.$transaction(
       dto.items.map((item) =>
-        this.prisma.experience.update({
-          where: { id: item.id },
+        this.prisma.experience.updateMany({
+          where: { id: item.id, personId },
           data: { sortOrder: item.sortOrder },
         }),
       ),
@@ -145,10 +152,11 @@ export class ExperienceService {
   // -- responsibilities -------------------------------------------------------
 
   async addResponsibility(
+    personId: string,
     experienceId: string,
     dto: CreateChildItemDto,
   ): Promise<ChildItemResponseDto> {
-    await this.findEntity(experienceId);
+    await this.findEntity(personId, experienceId);
     const sortOrder = dto.sortOrder ?? (await this.nextChildOrder('responsibility', experienceId));
 
     return this.prisma.experienceResponsibility.create({
@@ -157,8 +165,15 @@ export class ExperienceService {
     });
   }
 
-  async updateResponsibility(id: string, dto: UpdateChildItemDto): Promise<ChildItemResponseDto> {
-    const existing = await this.prisma.experienceResponsibility.findUnique({ where: { id } });
+  async updateResponsibility(
+    personId: string,
+    id: string,
+    dto: UpdateChildItemDto,
+  ): Promise<ChildItemResponseDto> {
+    // A child id is only reachable through a parent this tenant owns.
+    const existing = await this.prisma.experienceResponsibility.findFirst({
+      where: { id, experience: { personId } },
+    });
     if (!existing) throw new NotFoundException(`Responsibility ${id} not found`);
 
     return this.prisma.experienceResponsibility.update({
@@ -168,8 +183,10 @@ export class ExperienceService {
     });
   }
 
-  async removeResponsibility(id: string): Promise<void> {
-    const existing = await this.prisma.experienceResponsibility.findUnique({ where: { id } });
+  async removeResponsibility(personId: string, id: string): Promise<void> {
+    const existing = await this.prisma.experienceResponsibility.findFirst({
+      where: { id, experience: { personId } },
+    });
     if (!existing) throw new NotFoundException(`Responsibility ${id} not found`);
     await this.prisma.experienceResponsibility.delete({ where: { id } });
   }
@@ -177,10 +194,11 @@ export class ExperienceService {
   // -- achievements -----------------------------------------------------------
 
   async addAchievement(
+    personId: string,
     experienceId: string,
     dto: CreateChildItemDto,
   ): Promise<ChildItemResponseDto> {
-    await this.findEntity(experienceId);
+    await this.findEntity(personId, experienceId);
     const sortOrder = dto.sortOrder ?? (await this.nextChildOrder('achievement', experienceId));
 
     return this.prisma.experienceAchievement.create({
@@ -189,8 +207,10 @@ export class ExperienceService {
     });
   }
 
-  async removeAchievement(id: string): Promise<void> {
-    const existing = await this.prisma.experienceAchievement.findUnique({ where: { id } });
+  async removeAchievement(personId: string, id: string): Promise<void> {
+    const existing = await this.prisma.experienceAchievement.findFirst({
+      where: { id, experience: { personId } },
+    });
     if (!existing) throw new NotFoundException(`Achievement ${id} not found`);
     await this.prisma.experienceAchievement.delete({ where: { id } });
   }
@@ -199,11 +219,12 @@ export class ExperienceService {
 
   /** Attaches by name, reusing an existing technology whenever one matches. */
   async attachTechnology(
+    personId: string,
     experienceId: string,
     dto: AttachTechnologyDto,
   ): Promise<ExperienceResponseDto> {
-    await this.findEntity(experienceId);
-    const technologyId = await this.technologyService.resolveByName(dto.name);
+    await this.findEntity(personId, experienceId);
+    const technologyId = await this.technologyService.resolveByName(personId, dto.name);
 
     const sortOrder =
       dto.sortOrder ?? (await this.prisma.experienceTechnology.count({ where: { experienceId } }));
@@ -216,10 +237,17 @@ export class ExperienceService {
       update: { sortOrder },
     });
 
-    return this.findOne(experienceId);
+    return this.findOne(personId, experienceId);
   }
 
-  async detachTechnology(experienceId: string, technologyId: string): Promise<void> {
+  async detachTechnology(
+    personId: string,
+    experienceId: string,
+    technologyId: string,
+  ): Promise<void> {
+    // Confirms the experience is this tenant's before touching the junction row.
+    await this.findEntity(personId, experienceId);
+
     const link = await this.prisma.experienceTechnology.findUnique({
       where: { experienceId_technologyId: { experienceId, technologyId } },
     });
@@ -232,22 +260,26 @@ export class ExperienceService {
 
   // -- helpers ----------------------------------------------------------------
 
-  private async findEntity(id: string): Promise<ExperienceWithRelations> {
-    const entity = await this.prisma.experience.findUnique({
-      where: { id },
+  /**
+   * Single gate for every by-id operation. Scoping the lookup by personId is what stops
+   * one tenant reading or editing another's experience by guessing an id.
+   */
+  private async findEntity(personId: string, id: string): Promise<ExperienceWithRelations> {
+    const entity = await this.prisma.experience.findFirst({
+      where: { id, personId },
       include: experienceInclude,
     });
     if (!entity) throw new NotFoundException(`Experience ${id} not found`);
     return entity;
   }
 
-  private async resolveTechnologies(names?: string[]): Promise<string[]> {
+  private async resolveTechnologies(personId: string, names?: string[]): Promise<string[]> {
     if (!names?.length) return [];
 
     const ids: string[] = [];
     const seen = new Set<string>();
     for (const name of names) {
-      const id = await this.technologyService.resolveByName(name);
+      const id = await this.technologyService.resolveByName(personId, name);
       if (!seen.has(id)) {
         seen.add(id);
         ids.push(id);
@@ -282,8 +314,12 @@ export class ExperienceService {
   }
 
   /** Continues the existing "exp<N>" sequence so new rows keep the frontend id convention. */
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.experience.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own "exp<N>" / "proj<N>" sequence. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.experience.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^exp(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

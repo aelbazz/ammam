@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PersonService } from '../person/person.service';
 import {
   CreateSkillCategoryDto,
   CreateSkillDto,
@@ -16,28 +15,31 @@ type CategoryWithSkills = Prisma.SkillCategoryGetPayload<{ include: typeof inclu
 
 @Injectable()
 export class SkillService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly personService: PersonService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findAllCategories(includeUnpublished = true): Promise<SkillCategoryResponseDto[]> {
+  async findAllCategories(
+    personId: string,
+    includeUnpublished = true,
+  ): Promise<SkillCategoryResponseDto[]> {
     const rows = await this.prisma.skillCategory.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: { sortOrder: 'asc' },
       include,
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findCategory(id: string): Promise<SkillCategoryResponseDto> {
-    const row = await this.prisma.skillCategory.findUnique({ where: { id }, include });
+  async findCategory(personId: string, id: string): Promise<SkillCategoryResponseDto> {
+    // Scoped by personId so another tenant's category is Not Found, not readable.
+    const row = await this.prisma.skillCategory.findFirst({ where: { id, personId }, include });
     if (!row) throw new NotFoundException(`Skill category ${id} not found`);
     return this.toDto(row);
   }
 
-  async createCategory(dto: CreateSkillCategoryDto): Promise<SkillCategoryResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async createCategory(
+    personId: string,
+    dto: CreateSkillCategoryDto,
+  ): Promise<SkillCategoryResponseDto> {
     const max = await this.prisma.skillCategory.aggregate({
       where: { personId },
       _max: { sortOrder: true },
@@ -55,19 +57,27 @@ export class SkillService {
     return this.toDto(created);
   }
 
-  async updateCategory(id: string, dto: UpdateSkillCategoryDto): Promise<SkillCategoryResponseDto> {
-    await this.findCategory(id);
+  async updateCategory(
+    personId: string,
+    id: string,
+    dto: UpdateSkillCategoryDto,
+  ): Promise<SkillCategoryResponseDto> {
+    await this.findCategory(personId, id);
     await this.prisma.skillCategory.update({ where: { id }, data: dto });
-    return this.findCategory(id);
+    return this.findCategory(personId, id);
   }
 
-  async removeCategory(id: string): Promise<void> {
-    await this.findCategory(id);
+  async removeCategory(personId: string, id: string): Promise<void> {
+    await this.findCategory(personId, id);
     await this.prisma.skillCategory.delete({ where: { id } });
   }
 
-  async addSkill(categoryId: string, dto: CreateSkillDto): Promise<SkillResponseDto> {
-    const category = await this.findCategory(categoryId);
+  async addSkill(
+    personId: string,
+    categoryId: string,
+    dto: CreateSkillDto,
+  ): Promise<SkillResponseDto> {
+    const category = await this.findCategory(personId, categoryId);
     const max = await this.prisma.skill.aggregate({
       where: { categoryId },
       _max: { sortOrder: true },
@@ -80,9 +90,10 @@ export class SkillService {
     return { ...this.skillToDto(skill), category: category.name };
   }
 
-  async updateSkill(id: string, dto: UpdateSkillDto): Promise<SkillResponseDto> {
-    const existing = await this.prisma.skill.findUnique({
-      where: { id },
+  async updateSkill(personId: string, id: string, dto: UpdateSkillDto): Promise<SkillResponseDto> {
+    // A skill is only reachable through a category this tenant owns.
+    const existing = await this.prisma.skill.findFirst({
+      where: { id, category: { personId } },
       include: { category: true },
     });
     if (!existing) throw new NotFoundException(`Skill ${id} not found`);
@@ -91,8 +102,10 @@ export class SkillService {
     return { ...this.skillToDto(updated), category: existing.category.name };
   }
 
-  async removeSkill(id: string): Promise<void> {
-    const existing = await this.prisma.skill.findUnique({ where: { id } });
+  async removeSkill(personId: string, id: string): Promise<void> {
+    const existing = await this.prisma.skill.findFirst({
+      where: { id, category: { personId } },
+    });
     if (!existing) throw new NotFoundException(`Skill ${id} not found`);
     await this.prisma.skill.delete({ where: { id } });
   }

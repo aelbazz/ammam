@@ -16,6 +16,7 @@ import {
   TechnologyResponseDto,
   UpdateTechnologyDto,
 } from './dto/technology.dto';
+import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('technologies')
 @ApiBearerAuth()
@@ -26,16 +27,19 @@ export class TechnologyController {
   @Get()
   @ApiOperation({ summary: 'List all technologies with usage counts' })
   @ApiResponse({ status: 200, type: [TechnologyResponseDto] })
-  findAll(): Promise<TechnologyResponseDto[]> {
-    return this.service.findAll();
+  findAll(@CurrentUser() user: AuthenticatedUser): Promise<TechnologyResponseDto[]> {
+    return this.service.findAll(user.personId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one technology' })
   @ApiResponse({ status: 200, type: TechnologyResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id') id: string): Promise<TechnologyResponseDto> {
-    return this.service.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<TechnologyResponseDto> {
+    return this.service.findOne(user.personId, id);
   }
 
   @Post()
@@ -45,8 +49,11 @@ export class TechnologyController {
   })
   @ApiResponse({ status: 201, type: TechnologyResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  create(@Body() dto: CreateTechnologyDto): Promise<TechnologyResponseDto> {
-    return this.service.create(dto);
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateTechnologyDto,
+  ): Promise<TechnologyResponseDto> {
+    return this.service.create(user.personId, dto);
   }
 
   @Patch(':id')
@@ -54,10 +61,11 @@ export class TechnologyController {
   @ApiResponse({ status: 200, type: TechnologyResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   update(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateTechnologyDto,
   ): Promise<TechnologyResponseDto> {
-    return this.service.update(id, dto);
+    return this.service.update(user.personId, id, dto);
   }
 
   @Delete(':id')
@@ -69,7 +77,7 @@ export class TechnologyController {
   })
   @ApiResponse({ status: 204, description: 'Deleted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.service.remove(id);
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    return this.service.remove(user.personId, id);
   }
 }

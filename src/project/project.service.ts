@@ -28,29 +28,28 @@ export class ProjectService {
     private readonly personService: PersonService,
   ) {}
 
-  async findAll(includeUnpublished = true): Promise<ProjectResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<ProjectResponseDto[]> {
     const rows = await this.prisma.project.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: byOrder,
       include: projectInclude,
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<ProjectResponseDto> {
-    return this.toDto(await this.findEntity(id));
+  async findOne(personId: string, id: string): Promise<ProjectResponseDto> {
+    return this.toDto(await this.findEntity(personId, id));
   }
 
-  async create(dto: CreateProjectDto): Promise<ProjectResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateProjectDto): Promise<ProjectResponseDto> {
     const { highlights, technologies, legacyId, sortOrder, ...rest } = dto;
-    const technologyIds = await this.resolveTechnologies(technologies);
+    const technologyIds = await this.resolveTechnologies(personId, technologies);
 
     const created = await this.prisma.project.create({
       data: {
         ...rest,
         personId,
-        legacyId: legacyId ?? (await this.nextLegacyId()),
+        legacyId: legacyId ?? (await this.nextLegacyId(personId)),
         sortOrder: sortOrder ?? (await this.nextSortOrder(personId)),
         highlights: {
           create: (highlights ?? []).map((description, i) => ({ description, sortOrder: i })),
@@ -65,10 +64,12 @@ export class ProjectService {
     return this.toDto(created);
   }
 
-  async update(id: string, dto: UpdateProjectDto): Promise<ProjectResponseDto> {
-    await this.findEntity(id);
+  async update(personId: string, id: string, dto: UpdateProjectDto): Promise<ProjectResponseDto> {
+    await this.findEntity(personId, id);
     const { highlights, technologies, ...rest } = dto;
-    const technologyIds = technologies ? await this.resolveTechnologies(technologies) : undefined;
+    const technologyIds = technologies
+      ? await this.resolveTechnologies(personId, technologies)
+      : undefined;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.project.update({ where: { id }, data: rest });
@@ -98,24 +99,29 @@ export class ProjectService {
     return this.toDto(updated);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findEntity(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findEntity(personId, id);
     await this.prisma.project.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
+    // updateMany with personId in the filter: an id from another tenant matches nothing.
     await this.prisma.$transaction(
       dto.items.map((item) =>
-        this.prisma.project.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } }),
+        this.prisma.project.updateMany({
+          where: { id: item.id, personId },
+          data: { sortOrder: item.sortOrder },
+        }),
       ),
     );
   }
 
   async addHighlight(
+    personId: string,
     projectId: string,
     dto: CreateChildItemDto,
   ): Promise<ProjectHighlightResponseDto> {
-    await this.findEntity(projectId);
+    await this.findEntity(personId, projectId);
     const max = await this.prisma.projectHighlight.aggregate({
       where: { projectId },
       _max: { sortOrder: true },
@@ -131,15 +137,22 @@ export class ProjectService {
     });
   }
 
-  async removeHighlight(id: string): Promise<void> {
-    const existing = await this.prisma.projectHighlight.findUnique({ where: { id } });
+  async removeHighlight(personId: string, id: string): Promise<void> {
+    // A child id is only reachable through a parent this tenant owns.
+    const existing = await this.prisma.projectHighlight.findFirst({
+      where: { id, project: { personId } },
+    });
     if (!existing) throw new NotFoundException(`Highlight ${id} not found`);
     await this.prisma.projectHighlight.delete({ where: { id } });
   }
 
-  async attachTechnology(projectId: string, dto: AttachTechnologyDto): Promise<ProjectResponseDto> {
-    await this.findEntity(projectId);
-    const technologyId = await this.technologyService.resolveByName(dto.name);
+  async attachTechnology(
+    personId: string,
+    projectId: string,
+    dto: AttachTechnologyDto,
+  ): Promise<ProjectResponseDto> {
+    await this.findEntity(personId, projectId);
+    const technologyId = await this.technologyService.resolveByName(personId, dto.name);
     const sortOrder =
       dto.sortOrder ?? (await this.prisma.projectTechnology.count({ where: { projectId } }));
 
@@ -149,10 +162,13 @@ export class ProjectService {
       update: { sortOrder },
     });
 
-    return this.findOne(projectId);
+    return this.findOne(personId, projectId);
   }
 
-  async detachTechnology(projectId: string, technologyId: string): Promise<void> {
+  async detachTechnology(personId: string, projectId: string, technologyId: string): Promise<void> {
+    // Confirms the project is this tenant's before touching the junction row.
+    await this.findEntity(personId, projectId);
+
     const link = await this.prisma.projectTechnology.findUnique({
       where: { projectId_technologyId: { projectId, technologyId } },
     });
@@ -163,18 +179,25 @@ export class ProjectService {
     });
   }
 
-  private async findEntity(id: string): Promise<ProjectWithRelations> {
-    const entity = await this.prisma.project.findUnique({ where: { id }, include: projectInclude });
+  /**
+   * Single gate for every by-id operation. Scoping the lookup by personId is what stops
+   * one tenant reading or editing another's project by guessing an id.
+   */
+  private async findEntity(personId: string, id: string): Promise<ProjectWithRelations> {
+    const entity = await this.prisma.project.findFirst({
+      where: { id, personId },
+      include: projectInclude,
+    });
     if (!entity) throw new NotFoundException(`Project ${id} not found`);
     return entity;
   }
 
-  private async resolveTechnologies(names?: string[]): Promise<string[]> {
+  private async resolveTechnologies(personId: string, names?: string[]): Promise<string[]> {
     if (!names?.length) return [];
     const ids: string[] = [];
     const seen = new Set<string>();
     for (const name of names) {
-      const id = await this.technologyService.resolveByName(name);
+      const id = await this.technologyService.resolveByName(personId, name);
       if (!seen.has(id)) {
         seen.add(id);
         ids.push(id);
@@ -191,8 +214,12 @@ export class ProjectService {
     return (max._max.sortOrder ?? -1) + 1;
   }
 
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.project.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own "exp<N>" / "proj<N>" sequence. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.project.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^proj(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

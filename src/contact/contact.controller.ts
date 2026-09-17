@@ -2,6 +2,7 @@ import { Body, Controller, Get, Patch, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ContactService } from './contact.service';
 import { ContactResponseDto, UpdateContactDto, UpsertContactDto } from './dto/contact.dto';
+import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('contact')
 @ApiBearerAuth()
@@ -13,16 +14,19 @@ export class ContactController {
   @ApiOperation({ summary: 'Get contact information' })
   @ApiResponse({ status: 200, type: ContactResponseDto })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(): Promise<ContactResponseDto> {
-    return this.service.findOne();
+  findOne(@CurrentUser() user: AuthenticatedUser): Promise<ContactResponseDto> {
+    return this.service.findOne(user.personId);
   }
 
   @Put()
   @ApiOperation({ summary: 'Create or replace contact information' })
   @ApiResponse({ status: 200, type: ContactResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  upsert(@Body() dto: UpsertContactDto): Promise<ContactResponseDto> {
-    return this.service.upsert(dto);
+  upsert(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpsertContactDto,
+  ): Promise<ContactResponseDto> {
+    return this.service.upsert(user.personId, dto);
   }
 
   @Patch()
@@ -32,7 +36,10 @@ export class ContactController {
   })
   @ApiResponse({ status: 200, type: ContactResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  update(@Body() dto: UpdateContactDto): Promise<ContactResponseDto> {
-    return this.service.update(dto);
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateContactDto,
+  ): Promise<ContactResponseDto> {
+    return this.service.update(user.personId, dto);
   }
 }

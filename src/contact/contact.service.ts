@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PersonService } from '../person/person.service';
 import {
   ContactResponseDto,
   SocialLinkDto,
@@ -15,21 +14,16 @@ type ContactWithLinks = Prisma.ContactGetPayload<{ include: typeof include }>;
 /** Contact is 1:1 with person, so it is addressed without an id, like person. */
 @Injectable()
 export class ContactService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly personService: PersonService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findOne(): Promise<ContactResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async findOne(personId: string): Promise<ContactResponseDto> {
     const contact = await this.prisma.contact.findUnique({ where: { personId }, include });
     if (!contact) throw new NotFoundException('Contact information not found');
     return this.toDto(contact);
   }
 
   /** Creates the contact row if it does not exist yet, otherwise replaces its fields. */
-  async upsert(dto: UpsertContactDto): Promise<ContactResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async upsert(personId: string, dto: UpsertContactDto): Promise<ContactResponseDto> {
     const { socialLinks, ...rest } = dto;
 
     const contact = await this.prisma.contact.upsert({
@@ -41,11 +35,10 @@ export class ContactService {
 
     if (socialLinks) await this.replaceSocialLinks(contact.id, socialLinks);
 
-    return this.findOne();
+    return this.findOne(personId);
   }
 
-  async update(dto: UpdateContactDto): Promise<ContactResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async update(personId: string, dto: UpdateContactDto): Promise<ContactResponseDto> {
     const existing = await this.prisma.contact.findUnique({ where: { personId } });
     if (!existing) throw new NotFoundException('Contact information not found');
 
@@ -55,7 +48,7 @@ export class ContactService {
     // Only replace links when the caller actually sent the field.
     if (socialLinks) await this.replaceSocialLinks(existing.id, socialLinks);
 
-    return this.findOne();
+    return this.findOne(personId);
   }
 
   private async replaceSocialLinks(contactId: string, links: SocialLinkDto[]): Promise<void> {

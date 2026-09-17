@@ -43,6 +43,19 @@ describe('AuthService', () => {
     name: 'Admin',
     passwordHash,
     isActive: true,
+    personId: 'tenant-1',
+    person: { slug: 'ahmed' },
+  });
+
+  it('returns the tenant the administrator manages', async () => {
+    prisma.adminUser.findUnique.mockResolvedValue(activeUser());
+
+    const result = await service.login({ email: 'admin@example.com', password });
+
+    // The admin UI needs to know which profile it is editing; the API never accepts a
+    // tenant from the client.
+    expect(result.user.personId).toBe('tenant-1');
+    expect(result.user.personSlug).toBe('ahmed');
   });
 
   it('issues a token for valid credentials', async () => {
@@ -51,7 +64,13 @@ describe('AuthService', () => {
     const result = await service.login({ email: 'admin@example.com', password });
 
     expect(result.accessToken).toBe('signed.jwt.token');
-    expect(result.user).toEqual({ id: 'u1', email: 'admin@example.com', name: 'Admin' });
+    expect(result.user).toEqual({
+      id: 'u1',
+      email: 'admin@example.com',
+      name: 'Admin',
+      personId: 'tenant-1',
+      personSlug: 'ahmed',
+    });
     expect(result.expiresIn).toBe(604800);
   });
 
@@ -123,8 +142,8 @@ describe('AuthService', () => {
     prisma.adminUser.findUnique.mockResolvedValue(activeUser());
     await service.login({ email: '  ADMIN@Example.com  ', password });
 
-    expect(prisma.adminUser.findUnique).toHaveBeenCalledWith({
-      where: { email: 'admin@example.com' },
-    });
+    expect(prisma.adminUser.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'admin@example.com' } }),
+    );
   });
 });

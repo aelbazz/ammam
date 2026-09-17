@@ -16,22 +16,23 @@ export class AchievementService {
     private readonly personService: PersonService,
   ) {}
 
-  async findAll(includeUnpublished = true): Promise<AchievementResponseDto[]> {
+  async findAll(personId: string, includeUnpublished = true): Promise<AchievementResponseDto[]> {
     const rows = await this.prisma.achievement.findMany({
-      where: includeUnpublished ? {} : { isPublished: true },
+      where: includeUnpublished ? { personId } : { personId, isPublished: true },
       orderBy: { sortOrder: 'asc' },
     });
     return rows.map((r) => this.toDto(r));
   }
 
-  async findOne(id: string): Promise<AchievementResponseDto> {
-    const row = await this.prisma.achievement.findUnique({ where: { id } });
+  async findOne(personId: string, id: string): Promise<AchievementResponseDto> {
+    // findFirst with personId, not findUnique by id: another tenant's id must resolve to
+    // nothing rather than returning their record.
+    const row = await this.prisma.achievement.findFirst({ where: { id, personId } });
     if (!row) throw new NotFoundException(`Achievement ${id} not found`);
     return this.toDto(row);
   }
 
-  async create(dto: CreateAchievementDto): Promise<AchievementResponseDto> {
-    const personId = await this.personService.getDefaultPersonId();
+  async create(personId: string, dto: CreateAchievementDto): Promise<AchievementResponseDto> {
     const { legacyId, sortOrder, ...rest } = dto;
 
     const max = await this.prisma.achievement.aggregate({
@@ -42,33 +43,45 @@ export class AchievementService {
       data: {
         ...rest,
         personId,
-        legacyId: legacyId ?? (await this.nextLegacyId()),
+        legacyId: legacyId ?? (await this.nextLegacyId(personId)),
         sortOrder: sortOrder ?? (max._max.sortOrder ?? -1) + 1,
       },
     });
     return this.toDto(created);
   }
 
-  async update(id: string, dto: UpdateAchievementDto): Promise<AchievementResponseDto> {
-    await this.findOne(id);
+  async update(
+    personId: string,
+    id: string,
+    dto: UpdateAchievementDto,
+  ): Promise<AchievementResponseDto> {
+    await this.findOne(personId, id);
     return this.toDto(await this.prisma.achievement.update({ where: { id }, data: dto }));
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(personId: string, id: string): Promise<void> {
+    await this.findOne(personId, id);
     await this.prisma.achievement.delete({ where: { id } });
   }
 
-  async reorder(dto: ReorderDto): Promise<void> {
+  async reorder(personId: string, dto: ReorderDto): Promise<void> {
     await this.prisma.$transaction(
+      // Scoped by personId, so an id from another tenant matches nothing.
       dto.items.map((i) =>
-        this.prisma.achievement.update({ where: { id: i.id }, data: { sortOrder: i.sortOrder } }),
+        this.prisma.achievement.updateMany({
+          where: { id: i.id, personId },
+          data: { sortOrder: i.sortOrder },
+        }),
       ),
     );
   }
 
-  private async nextLegacyId(): Promise<string> {
-    const rows = await this.prisma.achievement.findMany({ select: { legacyId: true } });
+  /** Continues this tenant's own legacy-id sequence, not the global one. */
+  private async nextLegacyId(personId: string): Promise<string> {
+    const rows = await this.prisma.achievement.findMany({
+      where: { personId },
+      select: { legacyId: true },
+    });
     const highest = rows.reduce((max, r) => {
       const n = Number(/^ach(\d+)$/.exec(r.legacyId)?.[1] ?? 0);
       return n > max ? n : max;

@@ -272,6 +272,7 @@ async function seedContact(personId: string): Promise<void> {
  * what guarantees a technology used by both an experience and a project gets ONE row.
  */
 async function seedTechnologies(
+  personId: string,
   experiences: SrcExperience[],
   projects: SrcProject[],
 ): Promise<Map<string, string>> {
@@ -291,8 +292,8 @@ async function seedTechnologies(
   const idBySlug = new Map<string, string>();
   for (const [slug, name] of bySlug) {
     const tech = await prisma.technology.upsert({
-      where: { slug },
-      create: { slug, name },
+      where: { personId_slug: { personId, slug } },
+      create: { personId, slug, name },
       update: { name },
     });
     idBySlug.set(slug, tech.id);
@@ -335,7 +336,7 @@ async function seedExperiences(
     };
 
     const experience = await prisma.experience.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -409,7 +410,7 @@ async function seedProjects(
     };
 
     const project = await prisma.project.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -460,7 +461,7 @@ async function seedAchievements(personId: string): Promise<void> {
       sortOrder: index,
     };
     await prisma.achievement.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -491,7 +492,7 @@ async function seedCourses(personId: string): Promise<void> {
     };
 
     const course = await prisma.course.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -521,7 +522,7 @@ async function seedTimeline(personId: string): Promise<void> {
       sortOrder: index,
     };
     await prisma.timelineEvent.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -554,7 +555,7 @@ async function seedManagementRoles(personId: string): Promise<void> {
     };
 
     const role = await prisma.managementRole.upsert({
-      where: { legacyId: src.id },
+      where: { personId_legacyId: { personId, legacyId: src.id } },
       create: { legacyId: src.id, ...data },
       update: data,
     });
@@ -627,7 +628,7 @@ async function seedSkills(personId: string): Promise<void> {
   console.log(`  skill_category   ${categories.length}  (+${skills} skills)`);
 }
 
-async function seedAdminUser(): Promise<void> {
+async function seedAdminUser(personId: string): Promise<void> {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
 
@@ -644,7 +645,9 @@ async function seedAdminUser(): Promise<void> {
 
   await prisma.adminUser.upsert({
     where: { email },
-    create: { email, passwordHash, name: 'Administrator' },
+    create: { email, passwordHash, name: 'Administrator', personId },
+    // personId is deliberately not updated: moving an existing admin to a different tenant
+    // should be an explicit act, not a side effect of re-running the seed.
     update: { passwordHash },
   });
 
@@ -663,7 +666,7 @@ async function main(): Promise<void> {
   const personId = await seedPerson();
   await seedContact(personId);
 
-  const techIds = await seedTechnologies(experiences, projects);
+  const techIds = await seedTechnologies(personId, experiences, projects);
   await seedExperiences(personId, experiences, techIds);
   await seedProjects(personId, projects, techIds);
 
@@ -672,7 +675,7 @@ async function main(): Promise<void> {
   await seedTimeline(personId);
   await seedManagementRoles(personId);
   await seedSkills(personId);
-  await seedAdminUser();
+  await seedAdminUser(personId);
 
   console.log('\nImport complete.\n');
 }
