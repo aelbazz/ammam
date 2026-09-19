@@ -47,7 +47,7 @@ yarn start:dev
 - API: <http://localhost:3000/api/v1>
 - Swagger: <http://localhost:3000/api/docs>
 - Health: <http://localhost:3000/api/v1/health>
-- Public profile: <http://localhost:3000/api/v1/public/tenants/default/profile>
+- Public profile: <http://localhost:3000/api/v1/public/tenants/albaz/profile>
 
 ---
 

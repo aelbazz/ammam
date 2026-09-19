@@ -22,6 +22,7 @@ import { ManagementRoleModule } from './management-role/management-role.module';
 import { SkillModule } from './skill/skill.module';
 import { PublicModule } from './public/public.module';
 import { HealthModule } from './health/health.module';
+import { ContactSubmissionModule } from './contact-submission/contact-submission.module';
 import { TenantAccessModule } from './tenant-access/tenant-access.module';
 import { AuditLogModule } from './audit/audit-log.module';
 import { TenantModule } from './tenant/tenant.module';
@@ -65,6 +66,7 @@ import { WebsiteSettingsModule } from './website-settings/website-settings.modul
 
     PublicModule,
     HealthModule,
+    ContactSubmissionModule,
 
     TenantModule,
     UserModule,

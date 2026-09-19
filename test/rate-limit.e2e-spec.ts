@@ -52,4 +52,22 @@ describe('Rate limiting (e2e)', () => {
 
     expect(codes.every((c) => c === 200)).toBe(true);
   });
+
+  it('throttles the public contact form independently of the login budget', async () => {
+    const submit = () =>
+      request(app.getHttpServer()).post('/api/v1/contact-submissions').send({
+        name: 'Rate Limit Test',
+        email: 'ratelimit@example.com',
+        subject: 'Test',
+        message: 'Test message',
+      });
+
+    const codes: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      codes.push((await submit()).status);
+    }
+
+    expect(codes.slice(0, 3)).toEqual([201, 201, 201]);
+    expect(codes.slice(3)).toEqual([429, 429]);
+  });
 });

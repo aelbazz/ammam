@@ -4,4 +4,5 @@
  */
 process.env.THROTTLE_LIMIT = '1000';
 process.env.AUTH_THROTTLE_LIMIT = '3';
+process.env.CONTACT_THROTTLE_LIMIT = '3';
 process.env.THROTTLE_TTL_SECONDS = '60';

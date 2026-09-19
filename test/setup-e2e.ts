@@ -9,3 +9,4 @@
  */
 process.env.THROTTLE_LIMIT = process.env.THROTTLE_LIMIT ?? '100000';
 process.env.AUTH_THROTTLE_LIMIT = process.env.AUTH_THROTTLE_LIMIT ?? '100000';
+process.env.CONTACT_THROTTLE_LIMIT = process.env.CONTACT_THROTTLE_LIMIT ?? '100000';

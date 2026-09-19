@@ -88,6 +88,17 @@ enum PaymentStatus {
   @@map("payment_status")
 }
 
+/// Workflow state for a marketing-site "contact us" submission. Set by an ADMIN or
+/// COORDINATOR reviewing the inbox - never by the submitter.
+enum ContactSubmissionStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  SPAM
+
+  @@map("contact_submission_status")
+}
+
 // ---------------------------------------------------------------------------
 // Existing profile-domain enums
 // ---------------------------------------------------------------------------
@@ -221,6 +232,8 @@ model User {
   coordinatedTenants Tenant[] @relation("TenantCoordinator")
   createdTenants     Tenant[] @relation("TenantCreatedBy")
 
+  resolvedContactSubmissions ContactSubmission[] @relation("ContactSubmissionResolvedBy")
+
   lastLoginAt DateTime? @map("last_login_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -338,6 +351,39 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_log")
+}
+
+/// A "contact us" submission from the Portfolio marketing site (the platform's own /contact
+/// page) - not a tenant's public profile contact info, which is the unrelated Contact model.
+/// Platform-level rather than tenant-scoped: it is an inquiry directed at Portfolio itself,
+/// so it deliberately carries no tenantId.
+model ContactSubmission {
+  id String @id @default(cuid())
+
+  name    String
+  email   String
+  phone   String?
+  company String?
+  subject String
+  message String
+
+  status ContactSubmissionStatus @default(NEW)
+
+  /// Recorded for spam triage only - never shown to the submitter, never exposed publicly.
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  resolvedById String?   @map("resolved_by_id")
+  resolvedBy   User?     @relation("ContactSubmissionResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt   DateTime? @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@map("contact_submission")
 }
 
 /// Visual configuration, one row per tenant. Colors are validated as hex strings at the DTO

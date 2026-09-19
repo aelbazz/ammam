@@ -30,6 +30,12 @@ describe('isValidSlugFormat', () => {
     }
   });
 
+  it('rejects the Portfolio marketing site routes specifically', () => {
+    expect(isValidSlugFormat('about')).toBe(false);
+    expect(isValidSlugFormat('services')).toBe(false);
+    expect(isValidSlugFormat('contact')).toBe(false);
+  });
+
   it('rejects uppercase, spaces, and leading/trailing hyphens', () => {
     expect(isValidSlugFormat('John-Doe')).toBe(false);
     expect(isValidSlugFormat('john doe')).toBe(false);

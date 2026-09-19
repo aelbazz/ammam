@@ -123,7 +123,7 @@ treat the seed as a recovery tool, not a routine step.
 Verify:
 
 ```bash
-curl -s https://<your-backend-domain>/api/v1/public/tenants/default/profile | head -c 400
+curl -s https://<your-backend-domain>/api/v1/public/tenants/albaz/profile | head -c 400
 ```
 
 ### c. Deploy the container
@@ -224,8 +224,8 @@ Nothing in this document confirms your deployment works. After deploying, confir
 
 ```bash
 curl -fsS https://<your-backend-domain>/api/v1/health
-curl -fsS https://<your-backend-domain>/api/v1/public/tenants/default/profile | head -c 200
-curl -si  https://<your-backend-domain>/api/v1/public/tenants/default/profile \
+curl -fsS https://<your-backend-domain>/api/v1/public/tenants/albaz/profile | head -c 200
+curl -si  https://<your-backend-domain>/api/v1/public/tenants/albaz/profile \
   -H 'Origin: https://aelbazz.github.io' | grep -i access-control-allow-origin
 ```
 

@@ -30,7 +30,7 @@ import * as argon2 from 'argon2';
 const prisma = new PrismaClient();
 
 const DATA_DIR = join(__dirname, 'data');
-const TENANT_SLUG = 'default';
+const TENANT_SLUG = 'albaz';
 const DEFAULT_PLAN_ID = 'plan_free_default';
 
 // ---------------------------------------------------------------------------

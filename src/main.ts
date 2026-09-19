@@ -54,7 +54,7 @@ async function bootstrap(): Promise<void> {
     origin: config.corsOrigins,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'If-None-Match', 'If-Modified-Since'],
-    exposedHeaders: ['ETag', 'Last-Modified'],
+    exposedHeaders: ['ETag', 'Last-Modified', 'X-Tenant-Slug-Current'],
     credentials: false,
     maxAge: 86_400,
   });

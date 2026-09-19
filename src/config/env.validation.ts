@@ -72,6 +72,12 @@ export class EnvironmentVariables {
   @IsOptional()
   AUTH_THROTTLE_LIMIT = 5;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  CONTACT_THROTTLE_LIMIT = 5;
+
   @IsString()
   @IsOptional()
   SWAGGER_ENABLED?: string;

@@ -325,3 +325,47 @@ Matching the spec's own "do not build/integrate yet" guidance:
 - **No email-based invitation flow.** An Admin sets a new tenant's client credentials
   directly (`clientEmail` / `clientPassword` in the create request) rather than sending an
   invite email; there is no email-sending integration in this backend.
+
+---
+
+## 13. The Portfolio marketing site and contact submissions
+
+The platform itself (branded "Portfolio") has a public marketing site — `/`, `/about`,
+`/services`, `/contact` on the frontend — that is **not** a tenant profile. It is served
+alongside every tenant's own public profile (`/:tenantSlug`), and the two are kept
+architecturally separate:
+
+- **Reserved slugs**: `about`, `services`, `contact` were added to `RESERVED_SLUGS`
+  (`src/common/utils/slug.util.ts`) alongside the existing platform routes, so no tenant can
+  ever claim a marketing route as their own slug.
+- **`ContactSubmission`** (`src/contact-submission/`) is the "contact us" inbox for
+  Portfolio's own `/contact` page — deliberately distinct from the pre-existing `Contact`
+  model, which is a *tenant's own* published contact info. `ContactSubmission` carries no
+  `tenantId`: it is a platform-level inquiry, not tenant data.
+- **Public write, admin-only read**: `POST /contact-submissions` is `@Public()` and rate-
+  limited the same way login is (`@Throttle` overriding the single `'default'` throttler —
+  see §5 and `AuthController.login`); `GET`/`PATCH` require `Role.ADMIN` or
+  `Role.COORDINATOR`.
+- **Spam handling is silent, not a rejection.** `SpamGuardService` (a honeypot field plus a
+  minimum-fill-time check by default) never causes the public endpoint to error — a
+  submission that fails it is still persisted, just as `SPAM` instead of `NEW`, and still
+  answers with the same success response. Telling a bot its submission was rejected only
+  teaches it to adapt; this keeps a record and an audit trail without giving that signal
+  away. The guard is bound via DI (`{ provide: SpamGuardService, useClass:
+  HeuristicSpamGuardService }`) specifically so a real reCAPTCHA/hCaptcha-backed
+  implementation can replace it later without touching the controller.
+- **Marketing content itself is not database-backed.** Hero copy, benefit lists, the
+  services catalog, etc. live as static, typed data in the Angular frontend
+  (`src/app/features/marketing/content/*.content.ts`), not as a `PlatformPage`/
+  `PlatformSection` model — there is no requirement yet for anyone to edit this content
+  without a code change, and building that CRUD/UI now would be speculative.
+
+**The seeded tenant's slug was renamed from `default` to `albaz`** so Albaz — the platform's
+first client — has a real, human public address (`/albaz`) rather than a placeholder,
+without any special-casing: Albaz is created and stored exactly like any other tenant would
+be. This was a data migration (`prisma/migrations/20260919091500_rename_default_tenant_slug_to_albaz/`),
+not a `prisma/seed.ts` constant change alone — the seed script's tenant lookup is keyed on
+its `TENANT_SLUG` constant, so changing that constant against an *already-seeded* database
+would create a second tenant rather than rename the first. The migration reuses the existing
+`TenantSlugHistory` mechanism (§4), so a link already shared as `/default` still resolves and
+redirects via `X-Tenant-Slug-Current`.
