@@ -322,6 +322,7 @@ describe('PublicProfileService', () => {
     const { profile } = await service.resolveBySlug('ahmed');
 
     expect(profile.theme.primaryColor).toBe('#6366f1');
+    expect(profile.theme.designSystem).toBe('modern');
     expect(profile.settings.websiteTitle).toBe('Ahmed Mohsen Albaz'); // falls back to tenant.name
   });
 

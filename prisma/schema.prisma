@@ -407,6 +407,9 @@ model TenantTheme {
   /// sane range rather than the API rejecting values a future layout might want.
   borderRadius    String  @default("0.5rem") @map("border_radius")
   layout          String  @default("classic")
+  /// Validated against DESIGN_SYSTEMS in design-registry.ts, not a DB enum - see
+  /// docs/SAAS-ARCHITECTURE.md.
+  designSystem    String  @default("modern") @map("design_system")
   darkMode        Boolean @default(false) @map("dark_mode")
   customCss       String? @map("custom_css") @db.Text
 

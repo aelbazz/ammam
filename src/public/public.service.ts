@@ -318,6 +318,7 @@ export class PublicProfileService {
         fontFamily: tenant.theme?.fontFamily ?? 'Inter, sans-serif',
         borderRadius: tenant.theme?.borderRadius ?? '0.5rem',
         layout: tenant.theme?.layout ?? 'classic',
+        designSystem: tenant.theme?.designSystem ?? 'modern',
         darkMode: tenant.theme?.darkMode ?? false,
         customCss: tenant.theme?.customCss ?? null,
       },

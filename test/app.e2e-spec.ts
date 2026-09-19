@@ -425,6 +425,18 @@ describe('Profile API (e2e)', () => {
     });
   });
 
+  describe('GET /design-registry', () => {
+    it('is reachable without authentication and lists both design systems and layouts', async () => {
+      const res = await request(app.getHttpServer()).get('/api/v1/design-registry').expect(200);
+      expect(res.body.designSystems.map((d: { id: string }) => d.id)).toEqual(
+        expect.arrayContaining(['modern', 'creative']),
+      );
+      expect(res.body.layouts.map((l: { id: string }) => l.id)).toEqual(
+        expect.arrayContaining(['classic', 'sidebar']),
+      );
+    });
+  });
+
   describe('Theme and website settings', () => {
     it('reads and updates the theme', async () => {
       const before = await request(app.getHttpServer())
@@ -447,6 +459,43 @@ describe('Profile API (e2e)', () => {
         .patch('/api/v1/tenant/theme')
         .set(auth())
         .send({ primaryColor: 'not-a-color' })
+        .expect(400));
+
+    it('accepts a valid design system + layout pair', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ designSystem: 'creative', layout: 'sidebar' })
+        .expect(200);
+      expect(res.body.designSystem).toBe('creative');
+      expect(res.body.layout).toBe('sidebar');
+
+      // Restore, so later tests in this file see the default combination.
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ designSystem: 'modern', layout: 'classic' })
+        .expect(200);
+    });
+
+    it('rejects an unknown design system or layout', async () => {
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ designSystem: 'not-a-real-one' })
+        .expect(400);
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ layout: 'not-a-real-one' })
+        .expect(400);
+    });
+
+    it('rejects a design system and layout that are not compatible', () =>
+      request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ designSystem: 'creative', layout: 'classic' })
         .expect(400));
 
     it('reads website settings with default section arrays', async () => {

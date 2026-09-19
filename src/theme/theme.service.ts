@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ThemeResponseDto, UpdateThemeDto } from './dto/theme.dto';
+import { isCompatible, isValidDesignSystem, isValidLayout } from './design-registry';
 
 /**
  * One row per tenant, created with defaults during onboarding (TenantService.create) - so
@@ -18,7 +19,24 @@ export class ThemeService {
   }
 
   async update(tenantId: string, dto: UpdateThemeDto): Promise<ThemeResponseDto> {
-    await this.findOne(tenantId);
+    const existing = await this.findOne(tenantId);
+
+    if (dto.designSystem && !isValidDesignSystem(dto.designSystem)) {
+      throw new BadRequestException(`Unknown design system "${dto.designSystem}"`);
+    }
+    if (dto.layout && !isValidLayout(dto.layout)) {
+      throw new BadRequestException(`Unknown layout "${dto.layout}"`);
+    }
+
+    const nextDesignSystem = dto.designSystem ?? existing.designSystem;
+    const nextLayout = dto.layout ?? existing.layout;
+
+    if ((dto.designSystem || dto.layout) && !isCompatible(nextDesignSystem, nextLayout)) {
+      throw new BadRequestException(
+        `Layout "${nextLayout}" is not supported by design system "${nextDesignSystem}"`,
+      );
+    }
+
     return this.prisma.tenantTheme.update({ where: { tenantId }, data: dto });
   }
 }

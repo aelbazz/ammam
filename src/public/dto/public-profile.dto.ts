@@ -176,6 +176,7 @@ export class PublicThemeDto {
   @ApiProperty() fontFamily!: string;
   @ApiProperty() borderRadius!: string;
   @ApiProperty() layout!: string;
+  @ApiProperty() designSystem!: string;
   @ApiProperty() darkMode!: boolean;
   @ApiPropertyOptional({
     type: String,
