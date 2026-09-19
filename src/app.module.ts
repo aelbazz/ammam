@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { validateEnv } from './config/env.validation';
@@ -50,6 +51,8 @@ import { WebsiteSettingsModule } from './website-settings/website-settings.modul
         limit: Number(process.env.THROTTLE_LIMIT ?? 120),
       },
     ]),
+    // Backs @Cron in SubscriptionExpiryJob (BillingModule) - nothing else uses it yet.
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
 

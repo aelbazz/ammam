@@ -1,5 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Subscription } from '@prisma/client';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma, Subscription, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
@@ -9,6 +9,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class SubscriptionService {
+  private readonly logger = new Logger(SubscriptionService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
@@ -81,6 +83,49 @@ export class SubscriptionService {
     });
 
     return this.toDto(updated);
+  }
+
+  /**
+   * Flips every subscription whose expiresAt has passed to EXPIRED - nothing else watches
+   * this date. Run on a schedule (SubscriptionExpiryJob) and reachable on demand via
+   * POST /admin/subscriptions/expire-overdue, so an admin isn't stuck waiting for the next
+   * scheduled run, and so this is testable over HTTP without manipulating the clock.
+   *
+   * Only TRIAL/ACTIVE/PAST_DUE are eligible - an already-EXPIRED, SUSPENDED or CANCELLED
+   * subscription has nothing to transition to here. A tenant with no expiresAt (ongoing,
+   * no fixed term) is never touched.
+   */
+  async expireOverdue(): Promise<number> {
+    const overdue = await this.prisma.subscription.findMany({
+      where: {
+        expiresAt: { lte: new Date() },
+        status: {
+          in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE],
+        },
+      },
+    });
+
+    for (const sub of overdue) {
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: { status: SubscriptionStatus.EXPIRED },
+      });
+
+      await this.auditLog.log({
+        actor: null,
+        tenantId: sub.tenantId,
+        action: 'SUBSCRIPTION_EXPIRED',
+        resource: 'subscription',
+        resourceId: sub.id,
+        metadata: { from: sub.status, to: SubscriptionStatus.EXPIRED, expiresAt: sub.expiresAt },
+      });
+    }
+
+    if (overdue.length > 0) {
+      this.logger.log(`Expired ${overdue.length} overdue subscription(s).`);
+    }
+
+    return overdue.length;
   }
 
   private include() {

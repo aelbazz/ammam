@@ -637,6 +637,43 @@ describe('SaaS platform (e2e)', () => {
       expect(res.body.status).toBe('PAID');
       expect(res.body.provider).toBe('manual');
     });
+
+    it('expire-overdue flips a past-due-date subscription to EXPIRED and hides the public profile', async () => {
+      await request(app.getHttpServer())
+        .patch(`/api/v1/admin/tenants/${alphaTenantId}/subscription`)
+        .set(asAdmin())
+        .send({ status: 'ACTIVE', expiresAt: '2020-01-01T00:00:00.000Z' })
+        .expect(200);
+
+      const result = await request(app.getHttpServer())
+        .post('/api/v1/admin/subscriptions/expire-overdue')
+        .set(asAdmin())
+        .expect(201);
+      expect(result.body.expired).toBeGreaterThanOrEqual(1);
+
+      const clientView = await request(app.getHttpServer())
+        .get('/api/v1/tenant/subscription')
+        .set(asAlpha())
+        .expect(200);
+      expect(clientView.body.status).toBe('EXPIRED');
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/public/tenants/${ALPHA.slug}/profile`)
+        .expect(404);
+
+      // Restore, so later tests in this file see ALPHA as a normal active tenant again.
+      await request(app.getHttpServer())
+        .patch(`/api/v1/admin/tenants/${alphaTenantId}/subscription`)
+        .set(asAdmin())
+        .send({ status: 'ACTIVE', expiresAt: null })
+        .expect(200);
+    });
+
+    it('a client cannot trigger expire-overdue - it is an admin operation', () =>
+      request(app.getHttpServer())
+        .post('/api/v1/admin/subscriptions/expire-overdue')
+        .set(asAlpha())
+        .expect(403));
   });
 
   // =========================================================== audit log

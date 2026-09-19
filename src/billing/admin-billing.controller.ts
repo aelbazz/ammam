@@ -69,6 +69,18 @@ export class AdminBillingController {
     return this.subscriptions.findAllForAdmin({ status, tenantId, planId });
   }
 
+  @Post('subscriptions/expire-overdue')
+  @ApiOperation({
+    summary: 'Expire every subscription whose expiresAt has passed',
+    description:
+      'Runs automatically once a day (SubscriptionExpiryJob); this lets an admin trigger it ' +
+      'on demand instead of waiting for the next scheduled run.',
+  })
+  @ApiResponse({ status: 201, description: 'Number of subscriptions expired' })
+  async expireOverdueSubscriptions(): Promise<{ expired: number }> {
+    return { expired: await this.subscriptions.expireOverdue() };
+  }
+
   @Patch('tenants/:tenantId/subscription')
   @ApiOperation({ summary: "Update a tenant's subscription (status, plan, renewal date)" })
   @ApiResponse({ status: 200, type: SubscriptionResponseDto })
