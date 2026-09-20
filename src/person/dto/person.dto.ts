@@ -36,12 +36,6 @@ export class CreatePersonDto {
   @Max(80)
   yearsOfExperience!: number;
 
-  @ApiProperty({ description: 'Frontend-relative asset path, stored verbatim' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(500)
-  avatar!: string;
-
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(500) tagline!: string;
 
   @ApiPropertyOptional()
@@ -57,6 +51,12 @@ export class CreatePersonDto {
   birthday?: string;
 }
 
+/**
+ * `avatar` is deliberately absent - it changes only through AvatarController
+ * (POST/DELETE tenant/profile/avatar), which enforces upload validation and keeps
+ * avatarSource/avatarStorageKey consistent with it. Allowing it here too would let a client
+ * overwrite avatar with an arbitrary string that bypasses all of that.
+ */
 export class UpdatePersonDto extends PartialType(CreatePersonDto) {}
 
 export class PersonResponseDto {
