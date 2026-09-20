@@ -14,7 +14,7 @@ export class WebsiteSettingsController {
   constructor(private readonly settings: WebsiteSettingsService) {}
 
   @Get()
-  @ApiOperation({ summary: "Get my tenant's website-level settings (SEO, sections, branding)" })
+  @ApiOperation({ summary: "Get my tenant's website-level settings (SEO, branding)" })
   @ApiResponse({ status: 200, type: WebsiteSettingsResponseDto })
   findOne(@CurrentUser() user: AuthenticatedUser) {
     return this.settings.findOne(user.tenantId!);

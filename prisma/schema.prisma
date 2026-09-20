@@ -99,6 +99,15 @@ enum ContactSubmissionStatus {
   @@map("contact_submission_status")
 }
 
+/// Whether Person.avatar points at the platform's built-in default SVG or a file the client
+/// uploaded through StorageService. See docs/SAAS-ARCHITECTURE.md.
+enum AvatarSource {
+  DEFAULT
+  CUSTOM
+
+  @@map("avatar_source")
+}
+
 // ---------------------------------------------------------------------------
 // Existing profile-domain enums
 // ---------------------------------------------------------------------------
@@ -159,6 +168,10 @@ model Tenant {
   name   String
   status TenantStatus @default(PENDING)
 
+  /// The client's own "is my profile live" switch - distinct from `status`, which an admin
+  /// controls. Both must allow public access; see TenantAccessService.isPubliclyAccessible.
+  isPublished Boolean @default(true) @map("is_published")
+
   /// Platform user who ran the creation - an Admin, or a Coordinator creating on their own
   /// behalf. Nullable so a data-migration-created tenant (see prisma/seed.ts) is not forced
   /// to reference a synthetic actor.
@@ -176,6 +189,7 @@ model Tenant {
   person       Person?
   theme        TenantTheme?
   settings     WebsiteSettings?
+  sections     ClientSection[]
   client       User?
   subscription Subscription?
   payments     Payment[]
@@ -432,12 +446,6 @@ model WebsiteSettings {
   faviconUrl   String? @map("favicon_url")
   logoUrl      String? @map("logo_url")
 
-  /// Section keys shown on the public site, e.g. ["profile","experience","projects"].
-  visibleSections String[] @default(["profile", "experience", "projects", "skills", "achievements", "courses", "timeline", "management", "contact"]) @map("visible_sections")
-  /// Same keys, display order. Kept separate from visibleSections rather than relying on
-  /// array order alone, so a section can be reordered without a visibility side effect.
-  sectionOrder    String[] @default(["profile", "experience", "projects", "skills", "achievements", "courses", "timeline", "management", "contact"]) @map("section_order")
-
   seoTitle       String? @map("seo_title")
   seoDescription String? @map("seo_description")
   ogImageUrl     String? @map("og_image_url")
@@ -446,6 +454,29 @@ model WebsiteSettings {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("website_settings")
+}
+
+/// Which profile sections a tenant shows publicly, and in what order - see
+/// section-registry.ts for the fixed set of valid `sectionKey`s. Deliberately its own table
+/// rather than array columns on WebsiteSettings: per-section timestamps, and a
+/// straightforward single-row PATCH for one section's `enabled` flag or a transactional bulk
+/// reorder, are both awkward to express against a string array.
+model ClientSection {
+  id String @id @default(cuid())
+
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  sectionKey   String  @map("section_key")
+  enabled      Boolean @default(true)
+  displayOrder Int     @map("display_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, sectionKey])
+  @@index([tenantId, displayOrder])
+  @@map("client_section")
 }
 
 // ---------------------------------------------------------------------------
@@ -470,6 +501,15 @@ model Person {
   location          String
   yearsOfExperience Int     @map("years_of_experience")
   avatar            String
+  /// Whether `avatar` is the platform's built-in default SVG or something the client
+  /// uploaded - see StorageService and AvatarController. Never omit an avatar entirely.
+  avatarSource      AvatarSource @default(DEFAULT) @map("avatar_source")
+  avatarUpdatedAt   DateTime?    @map("avatar_updated_at")
+  /// StorageService key for the current CUSTOM avatar file, so it can be deleted on
+  /// replacement/removal. Null when avatarSource is DEFAULT, or for a CUSTOM avatar that
+  /// predates this feature (a legacy path string StorageService never uploaded). Never
+  /// exposed in any response DTO - purely internal bookkeeping.
+  avatarStorageKey  String?      @map("avatar_storage_key")
   tagline           String
   linkedin          String?
   birthday          String?

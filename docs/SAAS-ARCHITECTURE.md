@@ -202,6 +202,7 @@ Tenant.status !== ACTIVE           → blocked (PENDING, SUSPENDED, ARCHIVED)
 no Subscription row                → blocked
 Subscription.status TRIAL|ACTIVE|PAST_DUE   → allowed (PAST_DUE is a grace period)
 Subscription.status EXPIRED|SUSPENDED|CANCELLED → blocked
+Tenant.isPublished === false       → blocked (the client's OWN switch - see §14)
 ```
 
 `PublicProfileService` calls this and returns the **same 404** whether the tenant doesn't
@@ -221,11 +222,13 @@ rule.
 
 ```
 Tenant (PENDING)
-  → Person (placeholder content - "Add your professional title", etc.)
+  → Person (placeholder content - "Add your professional title", etc.;
+            avatar = the built-in default SVG, avatarSource = DEFAULT)
   → User (role CLIENT, tenantId set)
   → Subscription (on the given or default plan, status TRIAL)
   → TenantTheme (schema defaults)
   → WebsiteSettings (schema defaults, title = tenant name)
+  → ClientSection × one per section-registry.ts key, all enabled, in registry order
 ```
 
 All or nothing — if any step fails (a duplicate client email, an invalid plan), nothing is
@@ -369,3 +372,103 @@ its `TENANT_SLUG` constant, so changing that constant against an *already-seeded
 would create a second tenant rather than rename the first. The migration reuses the existing
 `TenantSlugHistory` mechanism (§4), so a link already shared as `/default` still resolves and
 redirects via `X-Tenant-Slug-Current`.
+
+---
+
+## 14. Avatars, section visibility, and the client dashboard
+
+### Avatars: always present, never a client-supplied SVG
+
+Every `Person` has a usable `avatar` at all times — `avatarSource` (`DEFAULT | CUSTOM`)
+records which kind it currently is, never both, never neither:
+
+```
+DEFAULT → avatar = the platform's built-in default-avatar.svg (public/assets/, static, committed)
+CUSTOM  → avatar = a URL returned by StorageService.upload() for a file this client uploaded
+```
+
+`avatar.controller.ts` (`GET/POST/DELETE tenant/profile/avatar`) is the only way this
+changes. Upload only accepts `image/jpeg`, `image/png`, `image/webp` — **SVG is rejected
+outright**, even though the platform serves one itself: an uploaded SVG is untrusted content
+that can carry active markup (`<script>`, external `<image>` references), while the
+committed default is authored by the platform and never touched by client input. The
+extension is cross-checked against the declared content type (`photo.png` claiming
+`image/jpeg` is rejected) as a second, cheap check beyond the MIME type alone. Max size is
+`MAX_AVATAR_SIZE_MB` (default 5), read once in `avatar.controller.ts` at class-load time,
+not hardcoded per call site.
+
+**Upload-before-delete.** A replacement is written via `StorageService.upload()`, the
+`Person` row is updated to point at it, and *only then* is the previous CUSTOM file deleted.
+If the upload step fails, the old avatar is untouched — the profile is never left without
+one. `Person.avatarStorageKey` (never exposed in any DTO) is what makes the old file
+findable for deletion; it is intentionally **not** derived by parsing the old avatar URL; a
+future non-local `StorageService` implementation is free to use a URL shape that has nothing
+in common with its object key.
+
+### `StorageService`: local disk today, swappable later
+
+```typescript
+abstract class StorageService {
+  abstract upload(input: UploadInput): Promise<{ url: string; key: string }>;
+  abstract delete(key: string): Promise<void>;
+}
+```
+
+`LocalStorageService` (the only implementation, bound in `StorageModule`, `@Global()`) writes
+under `public/uploads/`, which `main.ts` serves via `useStaticAssets` alongside the committed
+`public/assets/`. `public/uploads/` is gitignored — these are runtime files. Swapping in an
+S3-compatible provider later is a new class plus one line in `StorageModule`; nothing that
+calls `StorageService` needs to change, because callers only ever hold a `{ url, key }` pair,
+never a filesystem path.
+
+### Section visibility: `ClientSection`, not array columns
+
+`WebsiteSettings.visibleSections`/`sectionOrder` (string arrays) were removed — reading
+`public.service.ts` before this feature showed they were copied into the response as inert
+metadata and never used to filter anything. `ClientSection` (one row per tenant per
+`section-registry.ts` key) replaces them: a single-row `PATCH tenant/sections/:sectionKey`
+toggles one section without a read-modify-write of a whole array, and
+`PATCH tenant/sections/reorder` takes the full set transactionally.
+
+`section-registry.ts` intentionally does **not** use the original spec's suggested
+`hero`/`about`/`social` keys — this frontend's tenant home page already combines hero+about
+into one page, and social links render inside Contact rather than as a separate route. The
+real, separately-meaningful keys are `profile, experience, projects, skills, achievements,
+courses, timeline, management, contact` — which happen to exactly match `WebsiteSettings`'
+old array defaults, so the migration backfill was a clean 1:1 mapping.
+
+**Filtering happens once, on the server, in `PublicProfileService.buildProfile()`** — never
+on the frontend. The public response carries both signals, deliberately redundant with each
+other:
+
+```jsonc
+{
+  "sections": { "profile": true, "projects": false, ... }, // sectionKey -> enabled, for building nav
+  "projects": []                                            // AND the content itself is emptied
+}
+```
+
+A disabled section's key is never *omitted* from `sections` (so the frontend can still render
+a consistent nav structure) but its content array (or `contact`, which becomes `null`) is
+always empty when disabled — a client cannot rely on the frontend to hide something the API
+still hands over. Item-level visibility (`Experience.isPublished` etc., pre-existing) and
+section-level visibility (`ClientSection.enabled`) compose: a disabled section is empty
+regardless of item flags, and an enabled section still respects each item's own
+`isPublished`.
+
+### Profile-level publish switch
+
+`Tenant.isPublished` (`tenant/publish-status`, CLIENT-only) is the client's own "is my site
+live" switch, deliberately separate from the admin-controlled `Tenant.status` — both are
+folded into the same `TenantAccessService.isPubliclyAccessible()` decision (§6), with the
+same 404-not-403 treatment: an unpublished profile is indistinguishable from one that was
+never registered at that slug.
+
+### The dashboard: one call, not eight
+
+`GET tenant/dashboard` assembles tenant/person/publicSite/appearance/sections/statistics in a
+single response, replacing what the Angular client dashboard used to build from eight
+separate content-count requests. `publicSite.url` is built server-side from
+`FRONTEND_PUBLIC_URL` + the tenant's slug — the frontend renders it as a link
+(`target="_blank" rel="noopener noreferrer"`) rather than constructing the URL itself, so the
+platform's public URL shape lives in exactly one place.

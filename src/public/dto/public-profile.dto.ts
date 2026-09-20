@@ -193,8 +193,6 @@ export class PublicWebsiteSettingsDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) faviconUrl?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) logoUrl?: string | null;
-  @ApiProperty({ type: [String] }) visibleSections!: string[];
-  @ApiProperty({ type: [String] }) sectionOrder!: string[];
   @ApiPropertyOptional({ type: String, nullable: true }) seoTitle?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) seoDescription?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) ogImageUrl?: string | null;
@@ -211,6 +209,15 @@ export class PublicProfileDto {
   @ApiProperty({ type: [PublicTimelineEventDto] }) timelineEvents!: PublicTimelineEventDto[];
   @ApiProperty({ type: [PublicManagementRoleDto] }) managementRoles!: PublicManagementRoleDto[];
   @ApiProperty({ type: PublicSkillDataDto }) skills!: PublicSkillDataDto;
+  @ApiProperty({
+    type: Object,
+    description:
+      "sectionKey -> whether it shows publicly, in the client's own display order (see " +
+      'GET tenant/sections). A disabled section is also emptied out above - this map is ' +
+      'metadata for building nav, not the sole source of truth for what to render.',
+    example: { profile: true, experience: true, projects: false },
+  })
+  sections!: Record<string, boolean>;
   @ApiProperty({ type: PublicThemeDto }) theme!: PublicThemeDto;
   @ApiProperty({ type: PublicWebsiteSettingsDto }) settings!: PublicWebsiteSettingsDto;
 }

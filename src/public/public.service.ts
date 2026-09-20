@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantAccessService } from '../tenant-access/tenant-access.service';
 import { normalizeSlug } from '../common/utils/slug.util';
+import { SECTION_KEYS } from '../section/section-registry';
 import {
   PublicAchievementDto,
   PublicContactDto,
@@ -89,6 +90,7 @@ export class PublicProfileService {
         subscription: { select: { status: true } },
         theme: true,
         settings: true,
+        sections: { orderBy: { displayOrder: 'asc' } },
         person: {
           include: {
             contact: {
@@ -152,6 +154,7 @@ export class PublicProfileService {
     const access = this.tenantAccess.isPubliclyAccessible(
       tenant.status,
       tenant.subscription?.status ?? null,
+      tenant.isPublished,
     );
     if (!access.allowed) {
       // Deliberately the same 404 as an unknown slug: a suspended tenant's URL should not
@@ -160,6 +163,13 @@ export class PublicProfileService {
     }
 
     const person = tenant.person;
+
+    // Which sections show publicly, in the client's own display order - drives both the
+    // `sections` map below AND which content arrays get emptied out. Filtering happens here,
+    // never on the frontend, so a disabled section's data never leaves the server.
+    const sections: Record<string, boolean> = {};
+    for (const row of tenant.sections) sections[row.sectionKey] = row.enabled;
+    for (const key of SECTION_KEYS) if (!(key in sections)) sections[key] = true;
 
     // Explicit field-by-field mapping. Nothing is spread from the Prisma row, so database
     // ids, timestamps and isPublished flags cannot leak into the response by accident.
@@ -300,14 +310,15 @@ export class PublicProfileService {
       // Internal UUID deliberately omitted - the slug is the only public identifier.
       tenant: { slug: tenant.slug, name: tenant.name },
       person: personDto,
-      contact,
-      experiences,
-      projects,
-      achievements,
-      courses,
-      timelineEvents,
-      managementRoles,
-      skills,
+      contact: sections.contact ? contact : null,
+      experiences: sections.experience ? experiences : [],
+      projects: sections.projects ? projects : [],
+      achievements: sections.achievements ? achievements : [],
+      courses: sections.courses ? courses : [],
+      timelineEvents: sections.timeline ? timelineEvents : [],
+      managementRoles: sections.management ? managementRoles : [],
+      skills: sections.skills ? skills : { categories: [] },
+      sections,
       theme: {
         primaryColor: tenant.theme?.primaryColor ?? '#6366f1',
         secondaryColor: tenant.theme?.secondaryColor ?? '#64748b',
@@ -327,8 +338,6 @@ export class PublicProfileService {
         description: tenant.settings?.description ?? null,
         faviconUrl: tenant.settings?.faviconUrl ?? null,
         logoUrl: tenant.settings?.logoUrl ?? null,
-        visibleSections: tenant.settings?.visibleSections ?? [],
-        sectionOrder: tenant.settings?.sectionOrder ?? [],
         seoTitle: tenant.settings?.seoTitle ?? null,
         seoDescription: tenant.settings?.seoDescription ?? null,
         ogImageUrl: tenant.settings?.ogImageUrl ?? null,

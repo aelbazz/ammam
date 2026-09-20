@@ -82,6 +82,31 @@ export class EnvironmentVariables {
   @IsOptional()
   SWAGGER_ENABLED?: string;
 
+  /**
+   * This API's own externally-reachable origin - used to build absolute URLs for uploaded
+   * files and the built-in default avatar (see StorageService). Optional in development
+   * (defaults to http://localhost:<PORT>); main.ts refuses to start without it in production,
+   * the same way it refuses a CORS wildcard.
+   */
+  @IsString()
+  @IsOptional()
+  API_PUBLIC_URL?: string;
+
+  /**
+   * The Angular frontend's own public origin - used to build the canonical
+   * "visit my site" URL for a tenant (see DashboardService). Optional in development
+   * (defaults to http://localhost:4100); required in production, same as API_PUBLIC_URL.
+   */
+  @IsString()
+  @IsOptional()
+  FRONTEND_PUBLIC_URL?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  MAX_AVATAR_SIZE_MB = 5;
+
   /** Seed-only. Not required at runtime; the seed script validates them separately. */
   @IsString()
   @IsOptional()

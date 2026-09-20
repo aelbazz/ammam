@@ -31,6 +31,9 @@ import { UserModule } from './user/user.module';
 import { BillingModule } from './billing/billing.module';
 import { ThemeModule } from './theme/theme.module';
 import { WebsiteSettingsModule } from './website-settings/website-settings.module';
+import { SectionModule } from './section/section.module';
+import { StorageModule } from './storage/storage.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -76,11 +79,14 @@ import { WebsiteSettingsModule } from './website-settings/website-settings.modul
     BillingModule,
     ThemeModule,
     WebsiteSettingsModule,
+    SectionModule,
+    DashboardModule,
 
     // Global, no controller of their own beyond what's listed: consulted from several
     // otherwise-unrelated modules (tenant lifecycle, public profile access, audit trails).
     TenantAccessModule,
     AuditLogModule,
+    StorageModule,
   ],
   providers: [
     // Order matters: rate limiting runs before authentication, so unauthenticated

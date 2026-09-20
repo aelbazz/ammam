@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { MulterError } from 'multer';
 
 interface ErrorBody {
   statusCode: number;
@@ -75,6 +76,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       return this.resolvePrisma(exception);
+    }
+
+    if (exception instanceof MulterError) {
+      // e.g. LIMIT_FILE_SIZE from the avatar upload's fileSize limit - a rejected upload,
+      // not a server fault.
+      return { status: HttpStatus.BAD_REQUEST, message: exception.message, error: 'Bad Request' };
     }
 
     if (exception instanceof Prisma.PrismaClientValidationError) {

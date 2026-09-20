@@ -33,6 +33,10 @@ Thumbs.db
 prisma/*.db
 prisma/*.db-journal
 
+# Runtime-uploaded files (StorageService/LocalStorageService) - never committed. The default
+# avatar under public/assets/ is a static, committed asset and is not covered by this.
+/public/uploads/
+
 # Supabase CLI - Prisma Migrate owns the schema; the CLI's own migration
 # directory must never become a competing source of truth. See docs/DEPLOYMENT.md.
 supabase/.temp/

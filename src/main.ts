@@ -1,6 +1,8 @@
+import { join } from 'path';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { json, urlencoded } from 'express';
@@ -12,7 +14,7 @@ import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
 
   const configService = app.get(ConfigService);
   const config = buildAppConfig({
@@ -26,7 +28,22 @@ async function bootstrap(): Promise<void> {
     THROTTLE_LIMIT: configService.get('THROTTLE_LIMIT'),
     AUTH_THROTTLE_LIMIT: configService.get('AUTH_THROTTLE_LIMIT'),
     SWAGGER_ENABLED: configService.get('SWAGGER_ENABLED'),
+    API_PUBLIC_URL: configService.get('API_PUBLIC_URL'),
+    FRONTEND_PUBLIC_URL: configService.get('FRONTEND_PUBLIC_URL'),
   } as EnvironmentVariables);
+
+  if (
+    config.isProduction &&
+    (!configService.get('API_PUBLIC_URL') || !configService.get('FRONTEND_PUBLIC_URL'))
+  ) {
+    // Silently falling back to the localhost defaults in production would build broken
+    // avatar/public-site URLs that only fail once a real client clicks them.
+    throw new Error('API_PUBLIC_URL and FRONTEND_PUBLIC_URL must both be set in production.');
+  }
+
+  // Serves both the committed default avatar (public/assets/default-avatar.svg) and
+  // runtime-uploaded ones (public/uploads/avatars/...) - see StorageService.
+  app.useStaticAssets(join(process.cwd(), 'public'));
 
   // -- security ---------------------------------------------------------------
 

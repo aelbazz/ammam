@@ -8,14 +8,19 @@ export interface AppConfig {
   jwt: { secret: string; expiresIn: string };
   throttle: { ttlSeconds: number; limit: number; authLimit: number };
   swaggerEnabled: boolean;
+  /** This API's own externally-reachable origin, e.g. for building avatar URLs. */
+  apiPublicUrl: string;
+  /** The Angular frontend's own public origin, e.g. for the dashboard's "visit my site". */
+  frontendPublicUrl: string;
 }
 
 export function buildAppConfig(env: EnvironmentVariables): AppConfig {
   const isProduction = env.NODE_ENV === NodeEnv.Production;
+  const port = Number(env.PORT);
 
   return {
     nodeEnv: env.NODE_ENV,
-    port: Number(env.PORT),
+    port,
     isProduction,
     corsOrigins: env.CORS_ORIGINS.split(',')
       .map((o) => o.trim())
@@ -28,5 +33,9 @@ export function buildAppConfig(env: EnvironmentVariables): AppConfig {
     },
     // Swagger defaults ON outside production, OFF in production unless explicitly enabled.
     swaggerEnabled: env.SWAGGER_ENABLED ? env.SWAGGER_ENABLED === 'true' : !isProduction,
+    // Defaults only make sense in development - main.ts refuses to boot in production
+    // without these explicitly set, the same way it refuses a CORS wildcard.
+    apiPublicUrl: env.API_PUBLIC_URL ?? `http://localhost:${port}`,
+    frontendPublicUrl: env.FRONTEND_PUBLIC_URL ?? 'http://localhost:4100',
   };
 }

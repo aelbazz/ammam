@@ -2,9 +2,14 @@ import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import * as argon2 from 'argon2';
+import * as fs from 'fs';
+import { join } from 'path';
 import { Role } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { SectionService } from '../src/section/section.service';
+import { defaultAvatarUrl } from '../src/storage/default-avatar.util';
 
 /**
  * End-to-end tests against a real PostgreSQL instance, covering the CLIENT-facing surface:
@@ -43,6 +48,7 @@ describe('Profile API (e2e)', () => {
 
     await app.init();
     prisma = app.get(PrismaService);
+    const config = app.get(ConfigService);
 
     // Clean slate in case a previous run was interrupted.
     await prisma.tenant.deleteMany({ where: { slug: FIXTURE_SLUG } });
@@ -58,7 +64,7 @@ describe('Profile API (e2e)', () => {
         summary: 'Summary',
         location: 'Location',
         yearsOfExperience: 1,
-        avatar: '/assets/images/profile-image.jpg',
+        avatar: defaultAvatarUrl(config),
         tagline: 'Tagline',
       },
     });
@@ -91,6 +97,7 @@ describe('Profile API (e2e)', () => {
     await prisma.websiteSettings.create({
       data: { tenantId: tenant.id, websiteTitle: 'App E2E Fixture' },
     });
+    await prisma.clientSection.createMany({ data: SectionService.defaultCreateData(tenant.id) });
 
     personId = person.id;
     tenantSlug = tenant.slug;
@@ -194,6 +201,7 @@ describe('Profile API (e2e)', () => {
         'timelineEvents',
         'managementRoles',
         'skills',
+        'sections',
         'theme',
         'settings',
       ]);
@@ -498,14 +506,186 @@ describe('Profile API (e2e)', () => {
         .send({ designSystem: 'creative', layout: 'classic' })
         .expect(400));
 
-    it('reads website settings with default section arrays', async () => {
+    it('reads website settings (no section arrays - see tenant/sections instead)', async () => {
       const res = await request(app.getHttpServer())
         .get('/api/v1/tenant/settings')
         .set(auth())
         .expect(200);
 
-      expect(res.body.visibleSections).toContain('experience');
-      expect(res.body.sectionOrder.length).toBe(res.body.visibleSections.length);
+      expect(res.body.websiteTitle).toBe('App E2E Fixture');
+      expect(res.body).not.toHaveProperty('visibleSections');
+      expect(res.body).not.toHaveProperty('sectionOrder');
+    });
+  });
+
+  describe('Section visibility', () => {
+    it('lists every registry section, enabled by default, with a live item count', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/tenant/sections')
+        .set(auth())
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      const projects = res.body.find((s: { sectionKey: string }) => s.sectionKey === 'projects');
+      expect(projects).toMatchObject({ enabled: true, label: 'Projects' });
+      expect(typeof projects.itemCount).toBe('number');
+    });
+
+    it('rejects an unknown section key', () =>
+      request(app.getHttpServer())
+        .patch('/api/v1/tenant/sections/not-a-real-section')
+        .set(auth())
+        .send({ enabled: false })
+        .expect(400));
+
+    it('disabling a section hides its content on the public profile, then re-enabling restores it', async () => {
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/sections/projects')
+        .set(auth())
+        .send({ enabled: false })
+        .expect(200);
+
+      const hidden = await request(app.getHttpServer())
+        .get(`/api/v1/public/tenants/${tenantSlug}/profile`)
+        .expect(200);
+      expect(hidden.body.sections.projects).toBe(false);
+      expect(hidden.body.projects).toEqual([]);
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/sections/projects')
+        .set(auth())
+        .send({ enabled: true })
+        .expect(200);
+
+      const shown = await request(app.getHttpServer())
+        .get(`/api/v1/public/tenants/${tenantSlug}/profile`)
+        .expect(200);
+      expect(shown.body.sections.projects).toBe(true);
+    });
+
+    it('reorder requires every section exactly once', async () => {
+      const current = await request(app.getHttpServer())
+        .get('/api/v1/tenant/sections')
+        .set(auth())
+        .expect(200);
+
+      const partial = current.body.slice(0, -1).map((s: { sectionKey: string }, i: number) => ({
+        sectionKey: s.sectionKey,
+        displayOrder: i + 1,
+      }));
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/sections/reorder')
+        .set(auth())
+        .send({ sections: partial })
+        .expect(400);
+
+      const full = [...current.body].reverse().map((s: { sectionKey: string }, i: number) => ({
+        sectionKey: s.sectionKey,
+        displayOrder: i + 1,
+      }));
+      const reordered = await request(app.getHttpServer())
+        .patch('/api/v1/tenant/sections/reorder')
+        .set(auth())
+        .send({ sections: full })
+        .expect(200);
+
+      expect(reordered.body[0].sectionKey).toBe(current.body[current.body.length - 1].sectionKey);
+    });
+  });
+
+  describe('Avatar', () => {
+    it('starts with the built-in default avatar', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/tenant/profile/avatar')
+        .set(auth())
+        .expect(200);
+      expect(res.body.source).toBe('DEFAULT');
+      expect(res.body.url).toContain('default-avatar.svg');
+    });
+
+    it('rejects an SVG upload', () =>
+      request(app.getHttpServer())
+        .post('/api/v1/tenant/profile/avatar')
+        .set(auth())
+        .attach('file', Buffer.from('<svg></svg>'), {
+          filename: 'evil.svg',
+          contentType: 'image/svg+xml',
+        })
+        .expect(400));
+
+    it('uploads a real image, then removing it falls back to the default', async () => {
+      // A minimal valid 1x1 PNG.
+      const png = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      );
+
+      const uploaded = await request(app.getHttpServer())
+        .post('/api/v1/tenant/profile/avatar')
+        .set(auth())
+        .attach('file', png, { filename: 'photo.png', contentType: 'image/png' })
+        .expect(200);
+
+      expect(uploaded.body.source).toBe('CUSTOM');
+      expect(uploaded.body.url).not.toContain('default-avatar.svg');
+      expect(uploaded.body.url).toContain('/uploads/avatars/');
+
+      const uploadedKey = uploaded.body.url.split('/uploads/')[1];
+      expect(fs.existsSync(join(process.cwd(), 'public', 'uploads', uploadedKey))).toBe(true);
+
+      const removed = await request(app.getHttpServer())
+        .delete('/api/v1/tenant/profile/avatar')
+        .set(auth())
+        .expect(200);
+      expect(removed.body.source).toBe('DEFAULT');
+      expect(removed.body.url).toContain('default-avatar.svg');
+      expect(fs.existsSync(join(process.cwd(), 'public', 'uploads', uploadedKey))).toBe(false);
+    });
+  });
+
+  describe('GET /api/v1/tenant/dashboard', () => {
+    it('aggregates tenant, person, publicSite, appearance, sections and statistics in one call', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/tenant/dashboard')
+        .set(auth())
+        .expect(200);
+
+      expect(res.body.tenant.status).toBe('ACTIVE');
+      expect(res.body.publicSite).toEqual({
+        slug: tenantSlug,
+        url: expect.stringContaining(`/${tenantSlug}`),
+        isPublished: true,
+      });
+      expect(res.body.appearance.designSystem).toBe('modern');
+      expect(Array.isArray(res.body.sections)).toBe(true);
+      expect(typeof res.body.statistics.experience).toBe('number');
+    });
+  });
+
+  describe('Publish status', () => {
+    it('defaults to published, and unpublishing 404s the public profile', async () => {
+      const before = await request(app.getHttpServer())
+        .get('/api/v1/tenant/publish-status')
+        .set(auth())
+        .expect(200);
+      expect(before.body.isPublished).toBe(true);
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/publish-status')
+        .set(auth())
+        .send({ isPublished: false })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/public/tenants/${tenantSlug}/profile`)
+        .expect(404);
+
+      // Restore, so later tests in this file still see a live public profile.
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/publish-status')
+        .set(auth())
+        .send({ isPublished: true })
+        .expect(200);
     });
   });
 

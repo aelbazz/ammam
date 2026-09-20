@@ -23,9 +23,21 @@ describe('PublicProfileService', () => {
     coordinatorId: null,
     createdAt: new Date('2020-01-01'),
     updatedAt: new Date('2020-01-01'),
+    isPublished: true,
     subscription: { status: 'ACTIVE' },
     theme: null,
     settings: null,
+    sections: [
+      { sectionKey: 'profile', enabled: true, displayOrder: 1 },
+      { sectionKey: 'experience', enabled: true, displayOrder: 2 },
+      { sectionKey: 'projects', enabled: true, displayOrder: 3 },
+      { sectionKey: 'skills', enabled: true, displayOrder: 4 },
+      { sectionKey: 'achievements', enabled: true, displayOrder: 5 },
+      { sectionKey: 'courses', enabled: true, displayOrder: 6 },
+      { sectionKey: 'timeline', enabled: true, displayOrder: 7 },
+      { sectionKey: 'management', enabled: true, displayOrder: 8 },
+      { sectionKey: 'contact', enabled: true, displayOrder: 9 },
+    ],
     person: {
       id: 'person-db-id-should-not-leak',
       name: 'Ahmed Mohsen Albaz',
@@ -210,6 +222,7 @@ describe('PublicProfileService', () => {
       'timelineEvents',
       'managementRoles',
       'skills',
+      'sections',
       'theme',
       'settings',
     ]);
@@ -304,6 +317,7 @@ describe('PublicProfileService', () => {
     ['EXPIRED subscription', tenantRow({ subscription: { status: 'EXPIRED' } })],
     ['SUSPENDED subscription', tenantRow({ subscription: { status: 'SUSPENDED' } })],
     ['no subscription at all', tenantRow({ subscription: null })],
+    ['unpublished profile', tenantRow({ isPublished: false })],
   ])('hides the profile for %s behind the same 404 as an unknown slug', async (_label, row) => {
     mockTenant(row);
     await expect(service.resolveBySlug('ahmed')).rejects.toBeInstanceOf(NotFoundException);
@@ -324,6 +338,33 @@ describe('PublicProfileService', () => {
     expect(profile.theme.primaryColor).toBe('#6366f1');
     expect(profile.theme.designSystem).toBe('modern');
     expect(profile.settings.websiteTitle).toBe('Ahmed Mohsen Albaz'); // falls back to tenant.name
+  });
+
+  it('empties disabled sections instead of omitting them, and reports the sections map', async () => {
+    mockTenant(
+      tenantRow({
+        sections: [
+          { sectionKey: 'profile', enabled: true, displayOrder: 1 },
+          { sectionKey: 'experience', enabled: true, displayOrder: 2 },
+          { sectionKey: 'projects', enabled: false, displayOrder: 3 },
+          { sectionKey: 'skills', enabled: true, displayOrder: 4 },
+          { sectionKey: 'achievements', enabled: true, displayOrder: 5 },
+          { sectionKey: 'courses', enabled: true, displayOrder: 6 },
+          { sectionKey: 'timeline', enabled: true, displayOrder: 7 },
+          { sectionKey: 'management', enabled: true, displayOrder: 8 },
+          { sectionKey: 'contact', enabled: false, displayOrder: 9 },
+        ],
+      }),
+    );
+    const { profile } = await service.resolveBySlug('ahmed');
+
+    expect(profile.sections.projects).toBe(false);
+    expect(profile.projects).toEqual([]);
+    expect(profile.sections.contact).toBe(false);
+    expect(profile.contact).toBeNull();
+    // An enabled section keeps its data.
+    expect(profile.sections.experience).toBe(true);
+    expect(profile.experiences).toHaveLength(1);
   });
 
   it('produces a stable ETag that changes with the content', async () => {
