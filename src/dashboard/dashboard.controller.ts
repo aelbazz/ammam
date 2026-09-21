@@ -17,6 +17,6 @@ export class DashboardController {
   @ApiOperation({ summary: 'Everything the client dashboard needs, in one call' })
   @ApiResponse({ status: 200, type: DashboardResponseDto })
   findOne(@CurrentUser() user: AuthenticatedUser): Promise<DashboardResponseDto> {
-    return this.dashboard.findOne(user.tenantId!);
+    return this.dashboard.findOne(user.tenantId!, user.id);
   }
 }

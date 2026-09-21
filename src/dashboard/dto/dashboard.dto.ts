@@ -37,6 +37,10 @@ export class DashboardSectionDto {
   @ApiProperty() itemCount!: number;
 }
 
+export class DashboardPreferencesDto {
+  @ApiProperty() themeMode!: string;
+}
+
 export class DashboardStatisticsDto {
   @ApiProperty() experience!: number;
   @ApiProperty() projects!: number;
@@ -54,4 +58,5 @@ export class DashboardResponseDto {
   @ApiProperty({ type: DashboardAppearanceDto }) appearance!: DashboardAppearanceDto;
   @ApiProperty({ type: [DashboardSectionDto] }) sections!: DashboardSectionDto[];
   @ApiProperty({ type: DashboardStatisticsDto }) statistics!: DashboardStatisticsDto;
+  @ApiProperty({ type: DashboardPreferencesDto }) preferences!: DashboardPreferencesDto;
 }

@@ -330,7 +330,7 @@ export class PublicProfileService {
         borderRadius: tenant.theme?.borderRadius ?? '0.5rem',
         layout: tenant.theme?.layout ?? 'classic',
         designSystem: tenant.theme?.designSystem ?? 'modern',
-        darkMode: tenant.theme?.darkMode ?? false,
+        themeMode: tenant.theme?.themeMode ?? 'light',
         customCss: tenant.theme?.customCss ?? null,
       },
       settings: {

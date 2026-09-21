@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { ThemeResponseDto, UpdateThemeDto } from './dto/theme.dto';
 import { isCompatible, isValidDesignSystem, isValidLayout } from './design-registry';
+import { isValidThemeMode } from './theme-mode-registry';
 
 /**
  * One row per tenant, created with defaults during onboarding (TenantService.create) - so
@@ -26,6 +27,9 @@ export class ThemeService {
     }
     if (dto.layout && !isValidLayout(dto.layout)) {
       throw new BadRequestException(`Unknown layout "${dto.layout}"`);
+    }
+    if (dto.themeMode && !isValidThemeMode(dto.themeMode)) {
+      throw new BadRequestException(`Unknown theme mode "${dto.themeMode}"`);
     }
 
     const nextDesignSystem = dto.designSystem ?? existing.designSystem;

@@ -34,6 +34,7 @@ import { WebsiteSettingsModule } from './website-settings/website-settings.modul
 import { SectionModule } from './section/section.module';
 import { StorageModule } from './storage/storage.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PreferencesModule } from './preferences/preferences.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     WebsiteSettingsModule,
     SectionModule,
     DashboardModule,
+    PreferencesModule,
 
     // Global, no controller of their own beyond what's listed: consulted from several
     // otherwise-unrelated modules (tenant lifecycle, public profile access, audit trails).

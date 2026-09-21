@@ -442,6 +442,7 @@ describe('Profile API (e2e)', () => {
       expect(res.body.layouts.map((l: { id: string }) => l.id)).toEqual(
         expect.arrayContaining(['classic', 'sidebar']),
       );
+      expect(res.body.themeModes).toEqual(expect.arrayContaining(['light', 'dark']));
     });
   });
 
@@ -456,11 +457,32 @@ describe('Profile API (e2e)', () => {
       const updated = await request(app.getHttpServer())
         .patch('/api/v1/tenant/theme')
         .set(auth())
-        .send({ primaryColor: '#123456', darkMode: true })
+        .send({ primaryColor: '#123456', themeMode: 'dark' })
         .expect(200);
       expect(updated.body.primaryColor).toBe('#123456');
-      expect(updated.body.darkMode).toBe(true);
+      expect(updated.body.themeMode).toBe('dark');
+
+      // Restore, so later tests in this file (and the public-profile ones) see light mode.
+      await request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ themeMode: 'light' })
+        .expect(200);
     });
+
+    it('rejects an unknown theme mode', () =>
+      request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ themeMode: 'blue' })
+        .expect(400));
+
+    it('rejects a theme mode differing only in case', () =>
+      request(app.getHttpServer())
+        .patch('/api/v1/tenant/theme')
+        .set(auth())
+        .send({ themeMode: 'LIGHT' })
+        .expect(400));
 
     it('rejects an invalid color', () =>
       request(app.getHttpServer())
@@ -659,6 +681,42 @@ describe('Profile API (e2e)', () => {
       expect(res.body.appearance.designSystem).toBe('modern');
       expect(Array.isArray(res.body.sections)).toBe(true);
       expect(typeof res.body.statistics.experience).toBe('number');
+      expect(typeof res.body.preferences.themeMode).toBe('string');
+    });
+  });
+
+  describe('Preferences (Control Portal theme)', () => {
+    it('defaults to light, persists a change, and rejects an invalid mode', async () => {
+      const before = await request(app.getHttpServer())
+        .get('/api/v1/preferences')
+        .set(auth())
+        .expect(200);
+      expect(before.body.themeMode).toBe('light');
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(auth())
+        .send({ themeMode: 'dark' })
+        .expect(200);
+
+      const after = await request(app.getHttpServer())
+        .get('/api/v1/preferences')
+        .set(auth())
+        .expect(200);
+      expect(after.body.themeMode).toBe('dark');
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(auth())
+        .send({ themeMode: 'blue' })
+        .expect(400);
+
+      // Restore, so later tests (and other suites reusing this fixture's account) see light.
+      await request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(auth())
+        .send({ themeMode: 'light' })
+        .expect(200);
     });
   });
 

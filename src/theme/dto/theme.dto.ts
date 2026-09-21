@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsHexColor, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsHexColor, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateThemeDto {
   @ApiPropertyOptional() @IsHexColor() @IsOptional() primaryColor?: string;
@@ -24,7 +24,13 @@ export class UpdateThemeDto {
   @IsOptional()
   @MaxLength(50)
   designSystem?: string;
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() darkMode?: boolean;
+  @ApiPropertyOptional({
+    description: 'Validated against the theme-mode registry - see GET /design-registry.',
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(20)
+  themeMode?: string;
   @ApiPropertyOptional({
     description:
       'Rendered by the frontend inside a scoped <style> tag, never evaluated as script. ' +
@@ -47,7 +53,7 @@ export class ThemeResponseDto {
   @ApiProperty() borderRadius!: string;
   @ApiProperty() layout!: string;
   @ApiProperty() designSystem!: string;
-  @ApiProperty() darkMode!: boolean;
+  @ApiProperty() themeMode!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customCss?: string | null;
 }
 
@@ -66,4 +72,5 @@ export class LayoutDto {
 export class DesignRegistryResponseDto {
   @ApiProperty({ type: [DesignSystemDto] }) designSystems!: DesignSystemDto[];
   @ApiProperty({ type: [LayoutDto] }) layouts!: LayoutDto[];
+  @ApiProperty({ type: [String] }) themeModes!: string[];
 }

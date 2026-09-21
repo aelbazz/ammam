@@ -226,6 +226,50 @@ describe('SaaS platform (e2e)', () => {
     });
   });
 
+  // ===================================================== preferences (portal theme)
+
+  describe('Preferences: per-user, reachable by every role', () => {
+    it('GET /preferences carries no @Roles restriction - every role can reach it', async () => {
+      for (const headers of [asAdmin(), asCoordinator(), asAlpha()]) {
+        await request(app.getHttpServer()).get('/api/v1/preferences').set(headers).expect(200);
+      }
+    });
+
+    it("one user's PATCH never affects another user's preferences", async () => {
+      await request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(asAlpha())
+        .send({ themeMode: 'dark' })
+        .expect(200);
+
+      const alpha = await request(app.getHttpServer())
+        .get('/api/v1/preferences')
+        .set(asAlpha())
+        .expect(200);
+      expect(alpha.body.themeMode).toBe('dark');
+
+      const beta = await request(app.getHttpServer())
+        .get('/api/v1/preferences')
+        .set(asBeta())
+        .expect(200);
+      expect(beta.body.themeMode).toBe('light');
+
+      // Restore, so later tests reusing this fixture's account see light.
+      await request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(asAlpha())
+        .send({ themeMode: 'light' })
+        .expect(200);
+    });
+
+    it('never trusts a caller-supplied userId to modify someone else', () =>
+      request(app.getHttpServer())
+        .patch('/api/v1/preferences')
+        .set(asAlpha())
+        .send({ userId: 'someone-elses-id', themeMode: 'dark' })
+        .expect(400));
+  });
+
   // ==================================================== admin tenant CRUD
 
   describe('Admin tenant management', () => {

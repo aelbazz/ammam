@@ -248,6 +248,10 @@ model User {
 
   resolvedContactSubmissions ContactSubmission[] @relation("ContactSubmissionResolvedBy")
 
+  /// Control Portal theme preference - independent of TenantTheme, which is the PUBLIC
+  /// WEBSITE's own theme. See PreferencesService.
+  preference UserPreference?
+
   lastLoginAt DateTime? @map("last_login_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -424,13 +428,37 @@ model TenantTheme {
   /// Validated against DESIGN_SYSTEMS in design-registry.ts, not a DB enum - see
   /// docs/SAAS-ARCHITECTURE.md.
   designSystem    String  @default("modern") @map("design_system")
-  darkMode        Boolean @default(false) @map("dark_mode")
+  /// Validated against THEME_MODES in theme-mode-registry.ts, not a DB enum - a future
+  /// 'system' value must never need a migration. Applies to background/text/heading only
+  /// when 'light'; 'dark' uses the frontend's fixed dark tokens instead - see
+  /// docs/SAAS-ARCHITECTURE.md.
+  themeMode       String  @default("light") @map("theme_mode")
   customCss       String? @map("custom_css") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("tenant_theme")
+}
+
+/// One row per user's Control Portal preference - independent of TenantTheme, which is the
+/// PUBLIC WEBSITE's theme. Keyed by userId, not tenantId: ADMIN/COORDINATOR have no tenantId
+/// but are still real authenticated users of this same portal chrome. Lazily upserted by
+/// PreferencesService, not seeded during onboarding - most users have no row until they
+/// explicitly change something away from the default.
+model UserPreference {
+  id String @id @default(cuid())
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Validated against THEME_MODES in theme-mode-registry.ts, not a DB enum.
+  themeMode String @default("light") @map("theme_mode")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_preference")
 }
 
 /// Site-level configuration, distinct from profile content (Person/Experience/...) and

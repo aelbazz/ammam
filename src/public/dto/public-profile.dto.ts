@@ -177,7 +177,7 @@ export class PublicThemeDto {
   @ApiProperty() borderRadius!: string;
   @ApiProperty() layout!: string;
   @ApiProperty() designSystem!: string;
-  @ApiProperty() darkMode!: boolean;
+  @ApiProperty() themeMode!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

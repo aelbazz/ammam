@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SectionService } from '../section/section.service';
+import { PreferencesService } from '../preferences/preferences.service';
 import { DashboardResponseDto } from './dto/dashboard.dto';
 
 /**
@@ -13,17 +14,21 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sections: SectionService,
+    private readonly preferences: PreferencesService,
     private readonly config: ConfigService,
   ) {}
 
-  async findOne(tenantId: string): Promise<DashboardResponseDto> {
+  async findOne(tenantId: string, userId: string): Promise<DashboardResponseDto> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       include: { person: true, theme: true },
     });
     if (!tenant || !tenant.person) throw new NotFoundException('Tenant or profile not found');
 
-    const sectionRows = await this.sections.findAllForTenant(tenantId);
+    const [sectionRows, preferences] = await Promise.all([
+      this.sections.findAllForTenant(tenantId),
+      this.preferences.findOne(userId),
+    ]);
     const itemCount = (key: string) =>
       sectionRows.find((s) => s.sectionKey === key)?.itemCount ?? 0;
     const statistics: DashboardResponseDto['statistics'] = {
@@ -64,6 +69,7 @@ export class DashboardService {
         itemCount: s.itemCount,
       })),
       statistics,
+      preferences: { themeMode: preferences.themeMode },
     };
   }
 }

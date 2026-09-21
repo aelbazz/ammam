@@ -18,7 +18,7 @@ describe('ThemeService', () => {
     borderRadius: '0.5rem',
     layout: 'classic',
     designSystem: 'modern',
-    darkMode: false,
+    themeMode: 'light',
     customCss: null,
   };
 
@@ -105,6 +105,17 @@ describe('ThemeService', () => {
         layout: 'classic',
       });
       await expect(service.update('t1', { primaryColor: '#000000' })).resolves.toBeDefined();
+    });
+
+    it('allows a valid theme mode change', async () => {
+      const result = await service.update('t1', { themeMode: 'dark' });
+      expect(result.themeMode).toBe('dark');
+    });
+
+    it('rejects an unknown theme mode', async () => {
+      await expect(service.update('t1', { themeMode: 'blue' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 });

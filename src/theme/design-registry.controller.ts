@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { DESIGN_SYSTEMS, LAYOUTS } from './design-registry';
+import { THEME_MODES } from './theme-mode-registry';
 import { DesignRegistryResponseDto } from './dto/theme.dto';
 
 /**
@@ -20,6 +21,7 @@ export class DesignRegistryController {
     return {
       designSystems: DESIGN_SYSTEMS.map((d) => ({ ...d, layouts: [...d.layouts] })),
       layouts: LAYOUTS.map((l) => ({ ...l })),
+      themeModes: [...THEME_MODES],
     };
   }
 }
