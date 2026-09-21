@@ -1,14 +1,30 @@
-import { Controller, Get, HttpStatus, Param, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Query,
+  Req,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicProfileService } from './public.service';
 import { PublicProfileDto } from './dto/public-profile.dto';
 import { Public } from '../common/decorators/public.decorator';
+import { CvVersionService } from '../cv/cv-version.service';
+import { CvExportService } from '../cv/cv-export.service';
+import { CvDownloadQueryDto } from '../cv/dto/cv-download-query.dto';
 
 @ApiTags('public')
 @Controller('public')
 export class PublicController {
-  constructor(private readonly publicProfileService: PublicProfileService) {}
+  constructor(
+    private readonly publicProfileService: PublicProfileService,
+    private readonly cvVersions: CvVersionService,
+    private readonly cvExport: CvExportService,
+  ) {}
 
   /**
    * The single endpoint the Angular frontend calls for a tenant's public site. Replaces
@@ -69,6 +85,38 @@ export class PublicController {
     }
 
     return response.status(HttpStatus.OK).json(resolved.profile);
+  }
+
+  /**
+   * The tenant's default CV, as an anonymous download - the "Download CV" button on the
+   * public profile page. Distinct from `tenant/cv/versions/:id/download` (authenticated,
+   * any of the client's own saved versions): a site visitor has no JWT, and always wants
+   * "the" CV, not a specific saved configuration - see CvVersion.isDefault.
+   *
+   * Reuses resolveBySlug() so a suspended/unpublished/nonexistent tenant 404s exactly like
+   * the profile endpoint above - never a different error that would leak which case applies.
+   */
+  @Public()
+  @Get('tenants/:tenantSlug/cv')
+  @ApiOperation({ summary: "Download a tenant's default CV as PDF or DOCX" })
+  @ApiParam({ name: 'tenantSlug', example: 'albaz' })
+  @ApiResponse({ status: 200, description: 'The generated file' })
+  @ApiResponse({ status: 404, description: 'No accessible profile at that slug' })
+  async downloadCv(
+    @Param('tenantSlug') tenantSlug: string,
+    @Query() query: CvDownloadQueryDto,
+  ): Promise<StreamableFile> {
+    const resolved = await this.publicProfileService.resolveBySlug(tenantSlug);
+    const defaultVersion = await this.cvVersions.findDefault(resolved.personId);
+    const { buffer, filename, mimeType } = await this.cvExport.generate(
+      resolved.personId,
+      defaultVersion.id,
+      query.format,
+    );
+    return new StreamableFile(buffer, {
+      type: mimeType,
+      disposition: `attachment; filename="${filename}"`,
+    });
   }
 
   /**

@@ -551,6 +551,7 @@ model Person {
   timelineEvents  TimelineEvent[]
   managementRoles ManagementRole[]
   skillCategories SkillCategory[]
+  cvVersions      CvVersion[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1015,4 +1016,68 @@ model Skill {
   @@unique([categoryId, name])
   @@index([categoryId, sortOrder])
   @@map("skill")
+}
+
+// ---------------------------------------------------------------------------
+// CV export - a saved configuration for generating an ATS-optimized PDF/DOCX from the
+// profile domain above. See docs/SAAS-ARCHITECTURE.md and src/cv/.
+// ---------------------------------------------------------------------------
+
+model CvVersion {
+  id String @id @default(cuid())
+
+  personId String @map("person_id")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  /// The version's own label ("General CV", "AI Engineer CV") - distinct from cvTitle below.
+  name String
+
+  /// Exactly one true per person - enforced by a partial unique index in the migration
+  /// (schema.prisma's DSL cannot express a WHERE-qualified unique index).
+  isDefault Boolean @default(false) @map("is_default")
+
+  /// Validated against CV_TEMPLATES in cv-template-registry.ts, not a DB enum - see
+  /// design-registry.ts for the same pattern applied to the public site's design system.
+  templateId String @default("ATS_CLASSIC") @map("template_id")
+
+  /// Overrides Person.title/summary for this CV only. Null falls back to the live Person row.
+  cvTitle   String? @map("cv_title")
+  cvSummary String? @map("cv_summary") @db.Text
+
+  includePhone      Boolean @default(true) @map("include_phone")
+  includeEmail      Boolean @default(true) @map("include_email")
+  includeLinkedin   Boolean @default(true) @map("include_linkedin")
+  includeGithub     Boolean @default(true) @map("include_github")
+  includePortfolio  Boolean @default(true) @map("include_portfolio")
+  includeManagement Boolean @default(true) @map("include_management")
+
+  /// Ordered [{key, enabled}] for CV_SECTION_KEYS (cv-section-registry.ts) - array order IS
+  /// section render order. Json rather than a child table like ClientSection: this is edited
+  /// as one whole-form save from the CV Builder, not frequent single-toggle writes, so the
+  /// read-modify-write cost that justified extracting ClientSection into its own table
+  /// doesn't apply here.
+  sectionConfig Json @default("[]") @map("section_config")
+
+  /// Experience/Project ids excluded from THIS CV version only, independent of their public
+  /// isPublished flag - both can be true at once. Ids no longer belonging to this person are
+  /// ignored defensively at build time, never erroring.
+  excludedExperienceIds Json @default("[]") @map("excluded_experience_ids")
+  excludedProjectIds    Json @default("[]") @map("excluded_project_ids")
+
+  /// Optional explicit ordering override. Null (the only value Phase 1's UI ever writes)
+  /// falls back to newest-first by parsed startDate.
+  experienceOrder Json? @map("experience_order")
+  projectOrder    Json? @map("project_order")
+
+  /// Phase 2 (AI / job-description matching) fields. Nullable and deliberately unused by
+  /// every Phase 1 DTO/service, so that feature can land later without a migration.
+  targetRole     String? @map("target_role")
+  jobDescription String? @map("job_description") @db.Text
+  targetCompany  String? @map("target_company")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId])
+  @@map("cv_version")
 }

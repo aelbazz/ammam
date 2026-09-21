@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { TenantLifecycleService } from './tenant-lifecycle.service';
 import { SectionService } from '../section/section.service';
+import { CvVersionService } from '../cv/cv-version.service';
 import { defaultAvatarUrl } from '../storage/default-avatar.util';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { isValidSlugFormat, normalizeSlug, slugCandidates } from '../common/utils/slug.util';
@@ -83,8 +84,8 @@ export class TenantService {
 
   /**
    * The full onboarding transaction: Tenant + Person(placeholder) + User(CLIENT) +
-   * Subscription + Theme + WebsiteSettings + ClientSection defaults, all or nothing. If any
-   * step fails, nothing is left half-created.
+   * Subscription + Theme + WebsiteSettings + ClientSection defaults + a default CvVersion,
+   * all or nothing. If any step fails, nothing is left half-created.
    */
   async create(
     actor: AuthenticatedUser,
@@ -119,7 +120,7 @@ export class TenantService {
         },
       });
 
-      await tx.person.create({
+      const person = await tx.person.create({
         data: {
           tenantId: created.id,
           name: dto.name,
@@ -155,6 +156,10 @@ export class TenantService {
 
       await tx.clientSection.createMany({
         data: SectionService.defaultCreateData(created.id),
+      });
+
+      await tx.cvVersion.create({
+        data: CvVersionService.defaultCreateData(person.id),
       });
 
       return created;

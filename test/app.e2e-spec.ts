@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { SectionService } from '../src/section/section.service';
+import { CvVersionService } from '../src/cv/cv-version.service';
 import { defaultAvatarUrl } from '../src/storage/default-avatar.util';
 
 /**
@@ -98,6 +99,7 @@ describe('Profile API (e2e)', () => {
       data: { tenantId: tenant.id, websiteTitle: 'App E2E Fixture' },
     });
     await prisma.clientSection.createMany({ data: SectionService.defaultCreateData(tenant.id) });
+    await prisma.cvVersion.create({ data: CvVersionService.defaultCreateData(person.id) });
 
     personId = person.id;
     tenantSlug = tenant.slug;
@@ -745,6 +747,129 @@ describe('Profile API (e2e)', () => {
         .send({ isPublished: true })
         .expect(200);
     });
+  });
+
+  describe('CV export', () => {
+    let versionId: string;
+
+    it('has a default CV version seeded, with every non-empty section enabled', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/tenant/cv/versions')
+        .set(auth())
+        .expect(200);
+
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].isDefault).toBe(true);
+      expect(res.body[0].name).toBe('General CV');
+      versionId = res.body[0].id;
+    });
+
+    it('cannot delete the only CV version', () =>
+      request(app.getHttpServer())
+        .delete(`/api/v1/tenant/cv/versions/${versionId}`)
+        .set(auth())
+        .expect(400));
+
+    it('creates a second version, then cannot delete the default while another exists', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/api/v1/tenant/cv/versions')
+        .set(auth())
+        .send({ name: 'AI Engineer CV' })
+        .expect(201);
+      expect(created.body.isDefault).toBe(false);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/tenant/cv/versions/${versionId}`)
+        .set(auth())
+        .expect(400);
+
+      // Clean up the second version so later tests see exactly one version again.
+      await request(app.getHttpServer())
+        .delete(`/api/v1/tenant/cv/versions/${created.body.id}`)
+        .set(auth())
+        .expect(200);
+    });
+
+    it('rejects an unknown CV section key', () =>
+      request(app.getHttpServer())
+        .patch(`/api/v1/tenant/cv/versions/${versionId}`)
+        .set(auth())
+        .send({ sectionConfig: [{ key: 'not-a-real-section', enabled: true }] })
+        .expect(400));
+
+    it('rejects an unsupported download format', () =>
+      request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${versionId}/download?format=xls`)
+        .set(auth())
+        .expect(400));
+
+    it('preview returns the same normalized model the exports are built from, omitting empty sections', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${versionId}/preview`)
+        .set(auth())
+        .expect(200);
+
+      expect(res.body.header.fullName).toBe('App E2E Fixture');
+      expect(Array.isArray(res.body.sectionOrder)).toBe(true);
+      // The fixture person has no Contact row - never an internal id leaking into the header.
+      expect(JSON.stringify(res.body)).not.toContain(personId);
+    });
+
+    // supertest/superagent only auto-buffers a handful of well-known content types into
+    // res.body - an unrecognized one (like the OOXML docx mime type) otherwise parses to
+    // `{}`. This explicit binary parser, chained onto each request below, buffers the raw
+    // response bytes reliably regardless of the response's declared content type.
+    const asBuffer = (
+      res: request.Response,
+      callback: (err: Error | null, body: Buffer) => void,
+    ) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: Buffer) => chunks.push(chunk));
+      res.on('end', () => callback(null, Buffer.concat(chunks)));
+    };
+
+    it('downloads a real, selectable-text PDF', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${versionId}/download?format=pdf`)
+        .set(auth())
+        .buffer()
+        .parse(asBuffer)
+        .expect(200);
+
+      expect(res.headers['content-type']).toBe('application/pdf');
+      expect(res.headers['content-disposition']).toContain('attachment');
+      expect((res.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+    });
+
+    it('downloads a real DOCX (OOXML zip archive)', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${versionId}/download?format=docx`)
+        .set(auth())
+        .buffer()
+        .parse(asBuffer)
+        .expect(200);
+
+      expect(res.headers['content-type']).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+      expect((res.body as Buffer).subarray(0, 2).toString()).toBe('PK');
+    });
+
+    it('the public download endpoint serves the default version anonymously, matching filenames', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/public/tenants/${tenantSlug}/cv?format=pdf`)
+        .buffer()
+        .parse(asBuffer)
+        .expect(200);
+
+      expect(res.headers['content-disposition']).toContain('App-E2E-Fixture-CV.pdf');
+      expect((res.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+    });
+
+    it('404s the public CV download for an unregistered slug', () =>
+      request(app.getHttpServer())
+        .get('/api/v1/public/tenants/no-such-tenant/cv?format=pdf')
+        .expect(404));
   });
 
   describe('Subscription (read-only for CLIENT)', () => {

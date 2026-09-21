@@ -31,6 +31,7 @@ describe('SaaS platform (e2e)', () => {
   let alphaTechnologyId: string;
   let alphaCategoryId: string;
   let alphaSkillId: string;
+  let alphaCvVersionId: string;
 
   const ADMIN = { email: 'saas-e2e-admin@test.local', password: 'SaasE2eAdminPassword1' };
   const COORDINATOR = { email: 'saas-e2e-coord@test.local', password: 'SaasE2eCoordPassword1' };
@@ -176,6 +177,14 @@ describe('SaaS platform (e2e)', () => {
       .send({ name: 'Alpha Skill', level: 5 })
       .expect(201);
     alphaSkillId = skill.body.id;
+
+    // Every tenant gets a default CV version seeded during onboarding - fetch it rather than
+    // creating a new one, for the cross-tenant id-guessing tests below.
+    const cvVersions = await request(app.getHttpServer())
+      .get('/api/v1/tenant/cv/versions')
+      .set({ Authorization: `Bearer ${alphaClientToken}` })
+      .expect(200);
+    alphaCvVersionId = cvVersions.body[0].id;
   });
 
   afterAll(async () => {
@@ -500,6 +509,30 @@ describe('SaaS platform (e2e)', () => {
         .expect(404);
       await request(app.getHttpServer())
         .delete(`/api/v1/tenant/skill-categories/skills/${alphaSkillId}`)
+        .set(asBeta())
+        .expect(404);
+    });
+
+    it('cannot read, update, delete, or download the other tenant CV version', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${alphaCvVersionId}`)
+        .set(asBeta())
+        .expect(404);
+      await request(app.getHttpServer())
+        .patch(`/api/v1/tenant/cv/versions/${alphaCvVersionId}`)
+        .set(asBeta())
+        .send({ name: 'HIJACKED' })
+        .expect(404);
+      await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${alphaCvVersionId}/preview`)
+        .set(asBeta())
+        .expect(404);
+      await request(app.getHttpServer())
+        .get(`/api/v1/tenant/cv/versions/${alphaCvVersionId}/download?format=pdf`)
+        .set(asBeta())
+        .expect(404);
+      await request(app.getHttpServer())
+        .delete(`/api/v1/tenant/cv/versions/${alphaCvVersionId}`)
         .set(asBeta())
         .expect(404);
     });

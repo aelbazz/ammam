@@ -35,6 +35,7 @@ import { SectionModule } from './section/section.module';
 import { StorageModule } from './storage/storage.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PreferencesModule } from './preferences/preferences.module';
+import { CvModule } from './cv/cv.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { PreferencesModule } from './preferences/preferences.module';
     SectionModule,
     DashboardModule,
     PreferencesModule,
+    CvModule,
 
     // Global, no controller of their own beyond what's listed: consulted from several
     // otherwise-unrelated modules (tenant lifecycle, public profile access, audit trails).
